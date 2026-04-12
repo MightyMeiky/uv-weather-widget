@@ -217,11 +217,21 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
         data,
         fill:             true,
         backgroundColor:  'transparent',       // overwritten by uvGradientPlugin each frame
-        borderColor:      '#fb923c',            // solid orange line on top
+        borderColor:      '#86efac',            // fallback; overridden per-segment below
         borderWidth:      2,
         tension:          0.4,
         pointRadius:      0,
         pointHoverRadius: 0,
+        // Per-segment line color matching the UV risk zone of the higher endpoint
+        segment: {
+          borderColor: ctx => {
+            const v = ctx.p1.parsed.y
+            if (v >= 8) return '#f87171'   // red
+            if (v >= 6) return '#fb923c'   // orange
+            if (v >= 3) return '#eab308'   // yellow
+            return '#86efac'               // green
+          },
+        },
       }],
     },
     options: {
@@ -325,7 +335,6 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
           label:            '%',
           data:             probData,
           borderColor:      '#3b82f6',
-          borderDash:       [4, 3],
           borderWidth:      1.5,
           fill:             false,
           tension:          0.35,
