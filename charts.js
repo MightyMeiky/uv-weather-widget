@@ -96,27 +96,85 @@ function thresholdYAxis(thresholds, extra = {}) {
 }
 
 // ── "Jetzt" marker ───────────────────────────────────────
-function makeJetztPlugin(nowIdx) {
+// nowIdx < 0 means "not today" — line is hidden entirely.
+// bubbleValue: optional string shown in a colored pill at the
+// intersection of the Jetzt line and the data curve.
+// bubbleBg: background color for that pill.
+function makeJetztPlugin(nowIdx, data = null, bubbleValue = null, bubbleBg = null) {
   return {
     id: 'jetzt',
     afterDatasetsDraw(chart) {
       if (nowIdx < 0) return
-      const { ctx, chartArea: { top, bottom }, scales: { x } } = chart
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark'
+      const lineColor  = dark ? '#ffffff' : '#1a1814'
+      const labelColor = dark ? '#f0ece4' : '#1a1814'
+
+      const { ctx, chartArea: { top, bottom }, scales } = chart
+      const x   = scales.x
       const xPx = x.getPixelForValue(nowIdx)
+
       ctx.save()
-      ctx.strokeStyle = 'rgba(26,24,20,0.28)'
-      ctx.lineWidth   = 1
-      ctx.setLineDash([3, 3])
+
+      // Glow pass — slightly wider, low opacity, blurred
+      ctx.shadowColor = lineColor
+      ctx.shadowBlur  = 4
+      ctx.strokeStyle = lineColor
+      ctx.lineWidth   = 2
+      ctx.setLineDash([4, 4])
+      ctx.globalAlpha = 0.55
       ctx.beginPath()
       ctx.moveTo(xPx, top)
       ctx.lineTo(xPx, bottom)
       ctx.stroke()
+
+      // Crisp pass on top
+      ctx.shadowBlur  = 0
+      ctx.globalAlpha = 1
+      ctx.beginPath()
+      ctx.moveTo(xPx, top)
+      ctx.lineTo(xPx, bottom)
+      ctx.stroke()
+
       ctx.setLineDash([])
-      ctx.fillStyle    = 'rgba(26,24,20,0.38)'
-      ctx.font         = `500 8px ${MONO}`
+
+      // "Jetzt" label at the top
+      ctx.fillStyle    = labelColor
+      ctx.font         = `500 9px ${MONO}`
       ctx.textAlign    = 'center'
-      ctx.textBaseline = 'top'
-      ctx.fillText('Jetzt', xPx, top + 3)
+      ctx.textBaseline = 'bottom'
+      ctx.fillText('Jetzt', xPx, top - 2)
+
+      // Value bubble at intersection with data line (UV & Temp only)
+      if (bubbleValue !== null && data !== null && nowIdx >= 0 && nowIdx < data.length) {
+        // Find the Y scale (UV uses 'y', others don't pass data)
+        const yScale = scales.y ?? scales.yLeft
+        if (yScale) {
+          const val  = data[nowIdx]
+          const yPx  = yScale.getPixelForValue(val)
+
+          const PAD   = 5
+          ctx.font    = `400 10px ${MONO}`
+          const tw    = ctx.measureText(bubbleValue).width
+          const bw    = tw + PAD * 2
+          const bh    = 16
+          const bx    = xPx - bw / 2
+          const by    = yPx - bh - 5
+
+          // Pill background
+          ctx.fillStyle = bubbleBg ?? lineColor
+          const r = 4
+          ctx.beginPath()
+          ctx.roundRect(bx, by, bw, bh, r)
+          ctx.fill()
+
+          // White text
+          ctx.fillStyle    = '#ffffff'
+          ctx.textAlign    = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(bubbleValue, xPx, by + bh / 2)
+        }
+      }
+
       ctx.restore()
     },
   }
@@ -197,6 +255,14 @@ const uvGradientPlugin = {
   },
 }
 
+// ── UV risk color helper ─────────────────────────────────
+function uvRiskColor(v) {
+  if (v >= 8) return '#f87171'
+  if (v >= 6) return '#fb923c'
+  if (v >= 3) return '#eab308'
+  return '#86efac'
+}
+
 // ── UV chart ─────────────────────────────────────────────
 const UV_THRESHOLDS = [
   { value: 3, color: '#eab308', label: '🧴 Eincremen', tickLabel: '3' },
@@ -248,7 +314,12 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       uvZonesPlugin,
       uvGradientPlugin,
       makeThresholdPlugin(UV_THRESHOLDS),
-      makeJetztPlugin(nowIdx),
+      makeJetztPlugin(
+        nowIdx,
+        data,
+        nowIdx >= 0 && nowIdx < data.length ? String(data[nowIdx]) : null,
+        nowIdx >= 0 && nowIdx < data.length ? uvRiskColor(data[nowIdx]) : null,
+      ),
       makeMidnightPlugin(midnightIdx),
     ],
   })
@@ -262,6 +333,29 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
 
   const MM_COLOR   = '#60a5fa'   // left axis  — mm bars
   const PROB_COLOR = '#1d4ed8'   // right axis — % line
+
+  // Rain background zones (drawn against yRight 0–100%)
+  const rainZonesPlugin = {
+    id: 'rainZones',
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea: { left, right }, scales: { yRight } } = chart
+      if (!yRight) return
+      ctx.save()
+      const zones = [
+        { min: 40, max:  70, fill: 'rgba(96, 165, 250, 0.08)' },
+        { min: 70, max: 100, fill: 'rgba(96, 165, 250, 0.16)' },
+      ]
+      for (const z of zones) {
+        const yTop    = yRight.getPixelForValue(z.max)
+        const yBottom = yRight.getPixelForValue(z.min)
+        const h = yBottom - yTop
+        if (h <= 0) continue
+        ctx.fillStyle = z.fill
+        ctx.fillRect(left, yTop, right - left, h)
+      }
+      ctx.restore()
+    },
+  }
 
   // Rain threshold drawn against yRight
   const rainThreshPlugin = {
@@ -365,6 +459,7 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
       },
     },
     plugins: [
+      rainZonesPlugin,
       rainThreshPlugin,
       makeJetztPlugin(nowIdx),
       makeMidnightPlugin(midnightIdx),
@@ -376,22 +471,30 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
 let tempChart = null
 
 const TEMP_THRESHOLDS = [
-  { value: -5, color: '#93c5fd', label: 'Extraschichten', tickLabel: '−5°' },
-  { value:  0, color: '#bfdbfe', label: 'Frost',          tickLabel: '0°'  },
-  { value: 28, color: '#fb923c', label: 'Hitze',          tickLabel: '28°' },
-  { value: 33, color: '#f87171', label: 'Hitzealarm',     tickLabel: '33°' },
+  { value:  0, color: '#bfdbfe', label: 'Frost',      tickLabel: '0°'  },
+  { value: 28, color: '#fb923c', label: 'Hitze',      tickLabel: '28°' },
+  { value: 33, color: '#f87171', label: 'Hitzealarm', tickLabel: '33°' },
 ]
 
-// Comfort zone fill: filled rect from 0°C to 28°C
-const tempComfortPlugin = {
-  id: 'tempComfort',
+// Temperature zone fills
+const tempZonesPlugin = {
+  id: 'tempZones',
   beforeDatasetsDraw(chart) {
     const { ctx, chartArea: { left, right }, scales: { y } } = chart
-    const yTop    = y.getPixelForValue(28)
-    const yBottom = y.getPixelForValue(0)
     ctx.save()
-    ctx.fillStyle = 'rgba(134,239,172,0.07)'
-    ctx.fillRect(left, yTop, right - left, yBottom - yTop)
+    const zones = [
+      { min: -10, max:  0, fill: 'rgba(147, 197, 253, 0.12)' },
+      { min:  28, max: 33, fill: 'rgba(251, 146,  60, 0.08)' },
+      { min:  33, max: 38, fill: 'rgba(248, 113, 113, 0.10)' },
+    ]
+    for (const z of zones) {
+      const yTop    = y.getPixelForValue(z.max)
+      const yBottom = y.getPixelForValue(z.min)
+      const h = yBottom - yTop
+      if (h <= 0) continue
+      ctx.fillStyle = z.fill
+      ctx.fillRect(left, yTop, right - left, h)
+    }
     ctx.restore()
   },
 }
@@ -431,9 +534,14 @@ export function renderTempChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       },
     },
     plugins: [
-      tempComfortPlugin,
+      tempZonesPlugin,
       makeThresholdPlugin(TEMP_THRESHOLDS),
-      makeJetztPlugin(nowIdx),
+      makeJetztPlugin(
+        nowIdx,
+        data,
+        nowIdx >= 0 && nowIdx < data.length ? data[nowIdx] + '°C' : null,
+        '#f97316',
+      ),
       makeMidnightPlugin(midnightIdx),
     ],
   })
@@ -455,11 +563,33 @@ export function renderWindChart(labels, isoTimes, data, nowIdx, midnightIdx) {
   if (windChart) windChart.destroy()
 
   const dataMax = Math.max(...data, 0)
+  const yMax = Math.max(72, dataMax + 10)
+
+  // Wind background zones
+  const windZonesPlugin = {
+    id: 'windZones',
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea: { left, right }, scales: { y } } = chart
+      ctx.save()
+      const zones = [
+        { min: 45, max: 62,   fill: 'rgba(250, 204,  21, 0.08)' },
+        { min: 62, max: yMax, fill: 'rgba(248, 113, 113, 0.10)' },
+      ]
+      for (const z of zones) {
+        const yTop    = y.getPixelForValue(Math.min(z.max, y.max))
+        const yBottom = y.getPixelForValue(z.min)
+        const h = yBottom - yTop
+        if (h <= 0) continue
+        ctx.fillStyle = z.fill
+        ctx.fillRect(left, yTop, right - left, h)
+      }
+      ctx.restore()
+    },
+  }
+
   const activeThresholds = BEAUFORT
     .filter((t, i) => i === 0 || dataMax >= t.value - 20)
     .map(t => ({ ...t, color: '#94a3b8', tickLabel: `${t.value}` }))
-
-  const yMax = Math.max(72, dataMax + 10)
 
   windChart = new Chart(canvas.getContext('2d'), {
     type: 'line',
@@ -487,6 +617,7 @@ export function renderWindChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       },
     },
     plugins: [
+      windZonesPlugin,
       makeThresholdPlugin(activeThresholds),
       makeJetztPlugin(nowIdx),
       makeMidnightPlugin(midnightIdx),

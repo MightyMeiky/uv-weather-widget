@@ -17,6 +17,7 @@ function applyTheme(dark) {
   if (!dark) document.documentElement.removeAttribute('data-theme')
   themeToggle.textContent = dark ? '🌙' : '☀️'
   localStorage.setItem('theme', dark ? 'dark' : 'light')
+  if (cachedData) renderForTab(activeTab, cachedData.hourly)
 }
 
 themeToggle.addEventListener('click', () => {
@@ -86,18 +87,31 @@ function boxLabel(tab, hourly, windowIdx) {
 function renderHeuteSummary(hourly, windowIdx) {
   const maxUv   = Math.max(...windowIdx.map(i => hourly.uv_index[i]        ?? 0), 0)
   const maxRain = Math.max(...windowIdx.map(i => hourly.precipitation?.[i]  ?? 0), 0)
+  const maxProb = Math.max(...windowIdx.map(i => hourly.precipitation_probability?.[i] ?? 0), 0)
   const maxWind = Math.max(...windowIdx.map(i => hourly.wind_speed_10m?.[i] ?? 0), 0)
   const temps   = windowIdx.map(i => hourly.temperature_2m?.[i]).filter(v => v != null)
-  const parts = []
-  if (maxUv   > 0) parts.push(`UV max ${Math.round(maxUv * 10) / 10}`)
-  if (maxRain > 0) parts.push(`Regen max ${Math.round(maxRain * 10) / 10} mm`)
-  if (maxWind > 0) parts.push(`Wind max ${Math.round(maxWind)} km/h`)
-  if (temps.length) {
-    const minT = Math.round(Math.min(...temps))
-    const maxT = Math.round(Math.max(...temps))
-    parts.push(`🌡️ ${minT}°–${maxT}°C`)
-  }
-  $('heute-summary').textContent = parts.join(' · ')
+
+  const minT = temps.length ? Math.round(Math.min(...temps)) : '–'
+  const maxT = temps.length ? Math.round(Math.max(...temps)) : '–'
+
+  $('heute-summary').innerHTML = `
+    <div class="heute-summary-cell">
+      <span class="heute-summary-icon">🌡️</span>
+      <span class="heute-summary-value">${minT}°–${maxT}°C</span>
+    </div>
+    <div class="heute-summary-cell">
+      <span class="heute-summary-icon">☀️</span>
+      <span class="heute-summary-value">UV ${Math.round(maxUv * 10) / 10}</span>
+    </div>
+    <div class="heute-summary-cell">
+      <span class="heute-summary-icon">🌧️</span>
+      <span class="heute-summary-value">${Math.round(maxRain * 10) / 10} mm · ${maxProb}%</span>
+    </div>
+    <div class="heute-summary-cell">
+      <span class="heute-summary-icon">💨</span>
+      <span class="heute-summary-value">${Math.round(maxWind)} km/h</span>
+    </div>
+  `
 }
 
 function renderActionItems(hourly, windowIdx, tab) {
