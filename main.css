@@ -91,10 +91,16 @@ body::after {
 /* ── Header ─────────────────────────────────────────────── */
 header {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 1.25rem 0 1rem;
+  border-bottom: 1.5px solid var(--rule-strong);
+}
+
+.header-row {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 0 1.1rem;
-  border-bottom: 1.5px solid var(--rule-strong);
 }
 
 .brand {
@@ -117,49 +123,98 @@ header {
   line-height: 1;
 }
 
-.header-right {
+.header-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 6px;
 }
 
-.header-location {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.6rem;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  color: var(--ink-2);
-}
-
-.last-updated {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.54rem;
-  color: var(--ink-3);
-  letter-spacing: 0.06em;
-}
-
-/* ── Dark mode toggle ───────────────────────────────────── */
-.theme-toggle {
+/* Refresh + any future header icon buttons */
+.header-icon-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
   background: transparent;
-  border: 1px solid var(--rule-strong);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  width: 28px;
-  height: 28px;
+  border-radius: 8px;
+  font-size: 1.2rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--ink-2);
+  transition: background 0.15s, color 0.15s;
   padding: 0;
-  margin-top: 2px;
-  transition: border-color 0.2s, background 0.2s;
-  line-height: 1;
 }
 
-.theme-toggle:hover {
-  border-color: var(--ink-3);
+.header-icon-btn:hover {
   background: var(--rule);
+  color: var(--ink);
+}
+
+/* ── Pill toggle ────────────────────────────────────────── */
+.theme-pill {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--rule);
+  border: none;
+  border-radius: 20px;
+  padding: 3px;
+  cursor: pointer;
+  height: 36px;
+  transition: background 0.2s;
+}
+
+.theme-pill__opt {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+/* Light mode: sun active */
+.theme-pill__opt[data-mode="light"] {
+  background: var(--card-bg);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+.theme-pill__opt[data-mode="dark"] {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Dark mode: moon active */
+[data-theme="dark"] .theme-pill__opt[data-mode="light"] {
+  background: transparent;
+  box-shadow: none;
+}
+[data-theme="dark"] .theme-pill__opt[data-mode="dark"] {
+  background: var(--card-bg);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* Sub-header row: location + timestamp */
+.sub-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.header-location {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.last-updated {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
 }
 
 /* ── Main ───────────────────────────────────────────────── */
@@ -376,55 +431,16 @@ main {
 /* ── Footer ─────────────────────────────────────────────── */
 footer {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  padding: 0.875rem 0 0.25rem;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0.875rem 0 0.5rem;
   border-top: 1px solid var(--rule);
 }
 
-.refresh-btn {
-  background: transparent;
-  border: 1.5px solid var(--rule-strong);
-  color: var(--ink-2);
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.575rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
-}
-
-.refresh-btn:hover {
-  border-color: var(--ink-2);
-  color: var(--ink);
-  background: var(--rule);
-}
-
-.refresh-icon {
-  display: inline-block;
-  font-size: 0.9rem;
-  line-height: 1;
-}
-
-.refresh-btn.spinning .refresh-icon {
-  animation: spinCW 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes spinCW {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-.footer-right {
+.footer-bottom {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .data-source {
@@ -439,6 +455,95 @@ footer {
   font-size: 0.6875rem;   /* 11px */
   color: var(--ink-3);
   letter-spacing: 0.02em;
+}
+
+/* ── Refresh icon spin (now in header) ──────────────────── */
+.refresh-icon {
+  display: inline-block;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+#refresh-btn.spinning .refresh-icon {
+  animation: spinCW 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes spinCW {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── PWA install helper ─────────────────────────────────── */
+.pwa-install {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.pwa-install__toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+  text-align: left;
+  transition: background 0.15s;
+  gap: 8px;
+}
+
+.pwa-install__toggle:hover {
+  background: var(--rule);
+}
+
+.pwa-install__chevron {
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  color: var(--ink-3);
+}
+
+.pwa-install__content {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.pwa-install__platforms {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pwa-install__platform-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pwa-install__content ol {
+  list-style: decimal;
+  padding-left: 1.3em;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--ink-3);
+  line-height: 1.9;
+}
+
+@media (min-width: 480px) {
+  .pwa-install__platforms {
+    flex-direction: row;
+    gap: 24px;
+  }
+  .pwa-install__platform { flex: 1; }
 }
 
 /* ── Loading shimmer ────────────────────────────────────── */

@@ -20,7 +20,6 @@ const themeToggle = $('theme-toggle')
 function applyTheme(dark) {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
   if (!dark) document.documentElement.removeAttribute('data-theme')
-  themeToggle.textContent = dark ? '🌙' : '☀️'
   localStorage.setItem('theme', dark ? 'dark' : 'light')
   if (cachedData) renderForTab(activeTab, cachedData.hourly)
 }
@@ -73,15 +72,10 @@ function defaultTab() {
 
 // ── HEUTE box rendering ───────────────────────────────────
 
-function boxLabel(tab, hourly, windowIdx) {
-  const now = new Date()
-  if (isWeekend(now) && tab === 'heute') return 'WOCHENENDE · ganzer Tag'
-  const prefix = tab === 'heute' ? 'HEUTE' : 'MORGEN'
-  const uvHours = windowIdx.filter(i => (hourly.uv_index[i] ?? 0) >= 3)
-  if (!uvHours.length) return `${prefix} · 8–14 Uhr`
-  const fmt = i => new Date(hourly.time[i])
-    .toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-  return `${prefix} · ${fmt(uvHours[0])}–${fmt(uvHours[uvHours.length - 1])} Uhr`
+function boxLabel(tab) {
+  const d = tab === 'morgen' ? tomorrowDate() : new Date()
+  const dayName = d.toLocaleDateString('de-DE', { weekday: 'long' })
+  return isWeekend(d) ? dayName : `${dayName} · 8–14 Uhr`
 }
 
 function renderHeuteSummary(hourly, windowIdx) {
@@ -105,7 +99,7 @@ function renderHeuteSummary(hourly, windowIdx) {
     </div>
     <div class="heute-summary-cell">
       <span class="heute-summary-icon">🌧️</span>
-      <span class="heute-summary-value">${Math.round(maxRain * 10) / 10} mm · ${maxProb}%</span>
+      <span class="heute-summary-value">${maxProb}%</span>
     </div>
     <div class="heute-summary-cell">
       <span class="heute-summary-icon">💨</span>
@@ -149,7 +143,7 @@ function renderActionItems(hourly, windowIdx, tab) {
   }
 
   if (!items.length) {
-    items.push({ icon: '☀️', text: 'Entspannter Tag', value: 'kein Schutz nötig', calm: true })
+    items.push({ icon: '✅', text: 'Entspannter Tag', value: 'kein Schutz nötig', calm: true })
   }
 
   $('action-items').innerHTML = items
@@ -188,7 +182,7 @@ function renderForTab(tab, hourly) {
   const windowIdx = getWindowIndices(hourly.time, targetDate, startH, endH)
 
   // Box
-  $('heute-label').textContent = boxLabel(tab, hourly, windowIdx)
+  $('heute-label').textContent = boxLabel(tab)
   renderActionItems(hourly, windowIdx, tab)
   renderHeuteSummary(hourly, windowIdx)
 
@@ -207,7 +201,6 @@ function renderForTab(tab, hourly) {
 
   renderRainChart(labels, isoTimes,
     chartIdx.map(i => hourly.precipitation_probability[i] ?? 0),
-    chartIdx.map(i => Math.round((hourly.precipitation?.[i] ?? 0) * 10) / 10),
     nowIdx, midnightIdx)
 
   renderWindChart(labels, isoTimes,
@@ -243,9 +236,11 @@ async function update() {
 
     renderForTab(activeTab, hourly)
 
-    $('last-updated').textContent = `Stand: ${new Date().toLocaleTimeString('de-DE', {
-      hour: '2-digit', minute: '2-digit',
-    })}`
+    const now2 = new Date()
+    const datePart = now2.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })
+    const hh = String(now2.getHours()).padStart(2, '0')
+    const mm = String(now2.getMinutes()).padStart(2, '0')
+    $('last-updated').textContent = `${datePart}, ${hh}:${mm}`
   } catch (err) {
     console.error('Fetch failed:', err)
   } finally {
@@ -262,3 +257,12 @@ document.querySelectorAll('.tab').forEach(b =>
 $('refresh-btn').addEventListener('click', update)
 setInterval(update, 30 * 60 * 1000)
 update()
+
+// ── PWA install toggle ─────────────────────────────────────
+$('pwa-toggle').addEventListener('click', () => {
+  const content = $('pwa-content')
+  const chevron = document.querySelector('.pwa-install__chevron')
+  const isOpen  = !content.hidden
+  content.hidden = isOpen
+  chevron.textContent = isOpen ? '▾' : '▴'
+})

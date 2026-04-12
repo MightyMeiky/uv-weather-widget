@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f4ee" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐗</text></svg>" />
   <title>Frischlingswetter</title>
   <!-- No-flash dark mode: apply theme before first paint -->
@@ -22,14 +22,22 @@
   <div id="app">
 
     <header>
-      <div class="brand">
-        <span class="brand-icon">🐗</span>
-        <span class="brand-name">Frischlingswetter</span>
+      <div class="header-row">
+        <div class="brand">
+          <span class="brand-icon">🐗</span>
+          <span class="brand-name">Frischlingswetter</span>
+        </div>
+        <div class="header-actions">
+          <button class="header-icon-btn" id="refresh-btn" aria-label="Aktualisieren">↻</button>
+          <button class="theme-pill" id="theme-toggle" aria-label="Dark mode umschalten">
+            <span class="theme-pill__opt" data-mode="light">☀️</span>
+            <span class="theme-pill__opt" data-mode="dark">🌙</span>
+          </button>
+        </div>
       </div>
-      <div class="header-right">
+      <div class="sub-header">
         <span class="header-location">📍 Landsberied</span>
         <span class="last-updated" id="last-updated">–</span>
-        <button class="theme-toggle" id="theme-toggle" aria-label="Dark mode umschalten">☀️</button>
       </div>
     </header>
 
@@ -43,30 +51,30 @@
 
       <!-- HEUTE box -->
       <section class="heute-box" id="heute-box">
-        <div class="heute-label" id="heute-label">HEUTE · 8–14 Uhr</div>
+        <div class="heute-label" id="heute-label">Heute · 8–14 Uhr</div>
         <div id="action-items"></div>
         <div class="heute-summary" id="heute-summary"></div>
       </section>
 
-      <!-- Three charts — always visible -->
+      <!-- Four charts -->
       <div class="charts-grid">
 
         <div class="chart-panel">
-          <div class="chart-title">UV-Verlauf</div>
+          <div class="chart-title">☀️ UV-Verlauf</div>
           <div class="chart-wrapper">
             <canvas id="uv-chart"></canvas>
           </div>
         </div>
 
         <div class="chart-panel">
-          <div class="chart-title">Regenwahrscheinlichkeit</div>
+          <div class="chart-title">🌧️ Regen</div>
           <div class="chart-wrapper">
             <canvas id="rain-chart"></canvas>
           </div>
         </div>
 
         <div class="chart-panel">
-          <div class="chart-title">Wind km/h</div>
+          <div class="chart-title">💨 Wind</div>
           <div class="chart-wrapper">
             <canvas id="wind-chart"></canvas>
           </div>
@@ -90,8 +98,35 @@
     </main>
 
     <footer>
-      <button class="refresh-btn" id="refresh-btn">↻ Aktualisieren</button>
-      <div class="footer-right">
+      <!-- PWA install helper -->
+      <div class="pwa-install">
+        <button class="pwa-install__toggle" id="pwa-toggle">
+          <span>📱 App auf Homescreen speichern</span>
+          <span class="pwa-install__chevron">▾</span>
+        </button>
+        <div class="pwa-install__content" id="pwa-content" hidden>
+          <div class="pwa-install__platforms">
+            <div class="pwa-install__platform">
+              <div class="pwa-install__platform-title">Android</div>
+              <ol>
+                <li>Chrome-Menü öffnen (⋮)</li>
+                <li>„App installieren" tippen</li>
+                <li>Bestätigen</li>
+              </ol>
+            </div>
+            <div class="pwa-install__platform">
+              <div class="pwa-install__platform-title">iOS (Safari)</div>
+              <ol>
+                <li>Teilen-Button tippen (⬆)</li>
+                <li>„Zum Home-Bildschirm" wählen</li>
+                <li>„Hinzufügen" tippen</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
         <span class="data-source">Daten: Open-Meteo</span>
         <span class="built-by">gebaut von Jonte &amp; Meike 🐗</span>
       </div>

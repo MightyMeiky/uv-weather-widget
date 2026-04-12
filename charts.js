@@ -31,17 +31,25 @@ function xAxis(labels, isoTimes) {
   }
 }
 
-const TOOLTIP = {
-  enabled:         true,
-  backgroundColor: '#ffffff',
-  titleColor:      '#1a1814',
-  bodyColor:       '#57534e',
-  borderColor:     '#e8e4dc',
-  borderWidth:     1.5,
-  titleFont:       { family: MONO, size: 9 },
-  bodyFont:        { family: MONO, size: 9 },
-  padding:         8,
-  cornerRadius:    6,
+// Theme-aware tooltip — called at chart render time so dark mode is current
+function makeTooltip(labelFn) {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark'
+  return {
+    enabled:         true,
+    backgroundColor: dark ? '#1e1c19' : '#ffffff',
+    titleColor:      dark ? '#f0ece4' : '#1a1814',
+    bodyColor:       dark ? '#b8b3aa' : '#57534e',
+    borderColor:     dark ? 'rgba(255,255,255,0.09)' : '#e8e4dc',
+    borderWidth:     1,
+    titleFont:       { family: MONO, size: 10 },
+    bodyFont:        { family: MONO, size: 10 },
+    padding:         10,
+    cornerRadius:    6,
+    callbacks: {
+      title: items => items[0]?.label ?? '',
+      label: labelFn,
+    },
+  }
 }
 
 // ── Threshold line plugin ────────────────────────────────
@@ -115,19 +123,19 @@ function makeJetztPlugin(nowIdx, data = null, bubbleValue = null, bubbleBg = nul
 
       ctx.save()
 
-      // Glow pass — slightly wider, low opacity, blurred
+      // Glow pass — blurred halo
       ctx.shadowColor = lineColor
       ctx.shadowBlur  = 4
       ctx.strokeStyle = lineColor
-      ctx.lineWidth   = 2
-      ctx.setLineDash([4, 4])
-      ctx.globalAlpha = 0.55
+      ctx.lineWidth   = 1.5
+      ctx.setLineDash([])
+      ctx.globalAlpha = 0.45
       ctx.beginPath()
       ctx.moveTo(xPx, top)
       ctx.lineTo(xPx, bottom)
       ctx.stroke()
 
-      // Crisp pass on top
+      // Crisp solid pass on top
       ctx.shadowBlur  = 0
       ctx.globalAlpha = 1
       ctx.beginPath()
@@ -135,14 +143,12 @@ function makeJetztPlugin(nowIdx, data = null, bubbleValue = null, bubbleBg = nul
       ctx.lineTo(xPx, bottom)
       ctx.stroke()
 
-      ctx.setLineDash([])
-
-      // "Jetzt" label at the top
+      // "Jetzt" label — inside chart area, 8px from top edge
       ctx.fillStyle    = labelColor
       ctx.font         = `500 9px ${MONO}`
       ctx.textAlign    = 'center'
-      ctx.textBaseline = 'bottom'
-      ctx.fillText('Jetzt', xPx, top - 2)
+      ctx.textBaseline = 'top'
+      ctx.fillText('Jetzt', xPx, top + 8)
 
       // Value bubble at intersection with data line (UV & Temp only)
       if (bubbleValue !== null && data !== null && nowIdx >= 0 && nowIdx < data.length) {
@@ -304,7 +310,8 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 600, easing: 'easeInOutQuart' },
-      plugins: { legend: { display: false }, tooltip: TOOLTIP },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: makeTooltip(item => `UV ${item.raw}`) },
       scales: {
         x: xAxis(labels, isoTimes),
         y: { ...thresholdYAxis(UV_THRESHOLDS), min: 0, max: 12 },
@@ -325,29 +332,27 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
   })
 }
 
-// ── Rain chart — bars (mm) + dashed line (%) ─────────────
-export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midnightIdx) {
+// ── Rain chart — precipitation probability area ───────────
+export function renderRainChart(labels, isoTimes, probData, nowIdx, midnightIdx) {
   const canvas = document.getElementById('rain-chart')
   if (!canvas) return
   if (rainChart) rainChart.destroy()
 
-  const MM_COLOR   = '#60a5fa'   // left axis  — mm bars
-  const PROB_COLOR = '#1d4ed8'   // right axis — % line
+  const RAIN_COLOR = '#3b82f6'
 
-  // Rain background zones (drawn against yRight 0–100%)
+  // Rain background zones (0–100%)
   const rainZonesPlugin = {
     id: 'rainZones',
     beforeDatasetsDraw(chart) {
-      const { ctx, chartArea: { left, right }, scales: { yRight } } = chart
-      if (!yRight) return
+      const { ctx, chartArea: { left, right }, scales: { y } } = chart
       ctx.save()
       const zones = [
         { min: 40, max:  70, fill: 'rgba(96, 165, 250, 0.08)' },
         { min: 70, max: 100, fill: 'rgba(96, 165, 250, 0.16)' },
       ]
       for (const z of zones) {
-        const yTop    = yRight.getPixelForValue(z.max)
-        const yBottom = yRight.getPixelForValue(z.min)
+        const yTop    = y.getPixelForValue(z.max)
+        const yBottom = y.getPixelForValue(z.min)
         const h = yBottom - yTop
         if (h <= 0) continue
         ctx.fillStyle = z.fill
@@ -357,13 +362,12 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
     },
   }
 
-  // Rain threshold drawn against yRight
+  // 40% threshold line
   const rainThreshPlugin = {
     id: 'rainThresh',
     afterDatasetsDraw(chart) {
-      const { ctx, chartArea: { left, right, top, bottom }, scales: { yRight } } = chart
-      if (!yRight) return
-      const yPx = yRight.getPixelForValue(40)
+      const { ctx, chartArea: { left, right, top, bottom }, scales: { y } } = chart
+      const yPx = y.getPixelForValue(40)
       if (yPx < top || yPx > bottom) return
       ctx.save()
       ctx.strokeStyle = '#93c5fd'
@@ -383,78 +387,32 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
     },
   }
 
-  const mmMax = Math.max(...mmData, 5)   // always at least 5mm headroom
-
   rainChart = new Chart(canvas.getContext('2d'), {
-    type: 'bar',
+    type: 'line',
     data: {
       labels,
-      datasets: [
-        {
-          type:            'bar',
-          label:           'mm',
-          data:            mmData,
-          backgroundColor: 'rgba(96,165,250,0.45)',
-          borderColor:     'transparent',
-          borderRadius:    3,
-          borderSkipped:   false,
-          yAxisID:         'yLeft',
-          order:           2,
-        },
-        {
-          type:             'line',
-          label:            '%',
-          data:             probData,
-          borderColor:      PROB_COLOR,
-          borderWidth:      2,
-          fill:             false,
-          tension:          0.35,
-          pointRadius:      0,
-          pointHoverRadius: 0,
-          yAxisID:          'yRight',
-          order:            1,
-        },
-      ],
+      datasets: [{
+        data:             probData,
+        fill:             true,
+        backgroundColor:  'rgba(96, 165, 250, 0.18)',
+        borderColor:      RAIN_COLOR,
+        borderWidth:      2,
+        tension:          0.35,
+        pointRadius:      0,
+        pointHoverRadius: 0,
+      }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 600, easing: 'easeOutQuart' },
-      plugins: { legend: { display: false }, tooltip: TOOLTIP },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: makeTooltip(item => `${item.raw}%`) },
       scales: {
         x: xAxis(labels, isoTimes),
-        yLeft: {
-          type: 'linear', position: 'left',
-          grid: { display: false }, border: { display: false },
-          min: 0, max: mmMax,
-          title: {
-            display: true,
-            text: 'mm',
-            color: MM_COLOR,
-            font: { family: MONO, size: 10 },
-            padding: { bottom: 0 },
-          },
-          ticks: {
-            color: MM_COLOR, font: { family: MONO, size: 9 },
-            callback: v => v === 0 ? '0' : null, maxTicksLimit: 1,
-          },
-        },
-        yRight: {
-          type: 'linear', position: 'right',
-          grid: { display: false }, border: { display: false },
+        y: {
+          ...thresholdYAxis([{ value: 40, color: '#93c5fd', tickLabel: '40%' }]),
           min: 0, max: 100,
-          afterBuildTicks(axis) { axis.ticks = [{ value: 40 }] },
-          title: {
-            display: true,
-            text: '%',
-            color: PROB_COLOR,
-            font: { family: MONO, size: 10 },
-            padding: { bottom: 0 },
-          },
-          ticks: {
-            color: PROB_COLOR, font: { family: MONO, size: 9 },
-            callback: v => v === 40 ? '40%' : null,
-          },
         },
       },
     },
@@ -523,7 +481,8 @@ export function renderTempChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 600, easing: 'easeInOutQuart' },
-      plugins: { legend: { display: false }, tooltip: TOOLTIP },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: makeTooltip(item => `${item.raw}°C`) },
       scales: {
         x: xAxis(labels, isoTimes),
         y: {
@@ -610,7 +569,8 @@ export function renderWindChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 600, easing: 'easeInOutQuart' },
-      plugins: { legend: { display: false }, tooltip: TOOLTIP },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: makeTooltip(item => `${item.raw} km/h`) },
       scales: {
         x: xAxis(labels, isoTimes),
         y: { ...thresholdYAxis(activeThresholds), min: 0, max: yMax },
