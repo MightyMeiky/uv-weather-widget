@@ -260,33 +260,8 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
   if (!canvas) return
   if (rainChart) rainChart.destroy()
 
-  // Inline end-of-series labels
-  const rainLabelPlugin = {
-    id: 'rainLabels',
-    afterDatasetsDraw(chart) {
-      const { ctx, chartArea: { right, top }, scales } = chart
-      ctx.save()
-      ctx.font = `400 9px ${MONO}`
-      ctx.textBaseline = 'middle'
-
-      const lastProb = probData.reduceRight((a, v, i) => a === -1 && v != null ? i : a, -1)
-      if (lastProb >= 0 && scales.yRight) {
-        const yPx = scales.yRight.getPixelForValue(probData[lastProb])
-        ctx.fillStyle = 'rgba(59,130,246,0.8)'
-        ctx.textAlign = 'left'
-        ctx.fillText('%', right + 4, yPx)
-      }
-
-      const lastMm = mmData.reduceRight((a, v, i) => a === -1 && v != null ? i : a, -1)
-      if (lastMm >= 0 && scales.yLeft) {
-        const yPx = scales.yLeft.getPixelForValue(mmData[lastMm])
-        ctx.fillStyle = 'rgba(96,165,250,0.9)'
-        ctx.textAlign = 'left'
-        ctx.fillText('mm', right + 4, yPx + 12)
-      }
-      ctx.restore()
-    },
-  }
+  const MM_COLOR   = '#60a5fa'   // left axis  — mm bars
+  const PROB_COLOR = '#1d4ed8'   // right axis — % line
 
   // Rain threshold drawn against yRight
   const rainThreshPlugin = {
@@ -314,6 +289,8 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
     },
   }
 
+  const mmMax = Math.max(...mmData, 5)   // always at least 5mm headroom
+
   rainChart = new Chart(canvas.getContext('2d'), {
     type: 'bar',
     data: {
@@ -334,8 +311,8 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
           type:             'line',
           label:            '%',
           data:             probData,
-          borderColor:      '#3b82f6',
-          borderWidth:      1.5,
+          borderColor:      PROB_COLOR,
+          borderWidth:      2,
           fill:             false,
           tension:          0.35,
           pointRadius:      0,
@@ -355,9 +332,16 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
         yLeft: {
           type: 'linear', position: 'left',
           grid: { display: false }, border: { display: false },
-          min: 0,
+          min: 0, max: mmMax,
+          title: {
+            display: true,
+            text: 'mm',
+            color: MM_COLOR,
+            font: { family: MONO, size: 10 },
+            padding: { bottom: 0 },
+          },
           ticks: {
-            color: TICK_C, font: { family: MONO, size: 9 },
+            color: MM_COLOR, font: { family: MONO, size: 9 },
             callback: v => v === 0 ? '0' : null, maxTicksLimit: 1,
           },
         },
@@ -366,16 +350,89 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
           grid: { display: false }, border: { display: false },
           min: 0, max: 100,
           afterBuildTicks(axis) { axis.ticks = [{ value: 40 }] },
+          title: {
+            display: true,
+            text: '%',
+            color: PROB_COLOR,
+            font: { family: MONO, size: 10 },
+            padding: { bottom: 0 },
+          },
           ticks: {
-            color: TICK_C, font: { family: MONO, size: 9 },
+            color: PROB_COLOR, font: { family: MONO, size: 9 },
             callback: v => v === 40 ? '40%' : null,
           },
         },
       },
     },
     plugins: [
-      rainLabelPlugin,
       rainThreshPlugin,
+      makeJetztPlugin(nowIdx),
+      makeMidnightPlugin(midnightIdx),
+    ],
+  })
+}
+
+// ── Temperature chart ────────────────────────────────────
+let tempChart = null
+
+const TEMP_THRESHOLDS = [
+  { value: -5, color: '#93c5fd', label: 'Extraschichten', tickLabel: '−5°' },
+  { value:  0, color: '#bfdbfe', label: 'Frost',          tickLabel: '0°'  },
+  { value: 28, color: '#fb923c', label: 'Hitze',          tickLabel: '28°' },
+  { value: 33, color: '#f87171', label: 'Hitzealarm',     tickLabel: '33°' },
+]
+
+// Comfort zone fill: filled rect from 0°C to 28°C
+const tempComfortPlugin = {
+  id: 'tempComfort',
+  beforeDatasetsDraw(chart) {
+    const { ctx, chartArea: { left, right }, scales: { y } } = chart
+    const yTop    = y.getPixelForValue(28)
+    const yBottom = y.getPixelForValue(0)
+    ctx.save()
+    ctx.fillStyle = 'rgba(134,239,172,0.07)'
+    ctx.fillRect(left, yTop, right - left, yBottom - yTop)
+    ctx.restore()
+  },
+}
+
+export function renderTempChart(labels, isoTimes, data, nowIdx, midnightIdx) {
+  const canvas = document.getElementById('temp-chart')
+  if (!canvas) return
+  if (tempChart) tempChart.destroy()
+
+  tempChart = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        fill:             true,
+        backgroundColor:  'rgba(249,115,22,0.06)',
+        borderColor:      '#f97316',
+        borderWidth:      2,
+        tension:          0.4,
+        pointRadius:      0,
+        pointHoverRadius: 0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600, easing: 'easeInOutQuart' },
+      plugins: { legend: { display: false }, tooltip: TOOLTIP },
+      scales: {
+        x: xAxis(labels, isoTimes),
+        y: {
+          ...thresholdYAxis(TEMP_THRESHOLDS),
+          min: -10,
+          max:  38,
+        },
+      },
+    },
+    plugins: [
+      tempComfortPlugin,
+      makeThresholdPlugin(TEMP_THRESHOLDS),
       makeJetztPlugin(nowIdx),
       makeMidnightPlugin(midnightIdx),
     ],

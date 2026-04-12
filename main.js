@@ -1,7 +1,7 @@
 import './main.css'
 import './animations.js'
 import { fetchWeatherData } from './api.js'
-import { renderUvChart, renderRainChart, renderWindChart } from './charts.js'
+import { renderUvChart, renderRainChart, renderWindChart, renderTempChart } from './charts.js'
 import {
   thunderstormAlert,
   currentHourIndex,
@@ -87,10 +87,16 @@ function renderHeuteSummary(hourly, windowIdx) {
   const maxUv   = Math.max(...windowIdx.map(i => hourly.uv_index[i]        ?? 0), 0)
   const maxRain = Math.max(...windowIdx.map(i => hourly.precipitation?.[i]  ?? 0), 0)
   const maxWind = Math.max(...windowIdx.map(i => hourly.wind_speed_10m?.[i] ?? 0), 0)
+  const temps   = windowIdx.map(i => hourly.temperature_2m?.[i]).filter(v => v != null)
   const parts = []
   if (maxUv   > 0) parts.push(`UV max ${Math.round(maxUv * 10) / 10}`)
   if (maxRain > 0) parts.push(`Regen max ${Math.round(maxRain * 10) / 10} mm`)
   if (maxWind > 0) parts.push(`Wind max ${Math.round(maxWind)} km/h`)
+  if (temps.length) {
+    const minT = Math.round(Math.min(...temps))
+    const maxT = Math.round(Math.max(...temps))
+    parts.push(`🌡️ ${minT}°–${maxT}°C`)
+  }
   $('heute-summary').textContent = parts.join(' · ')
 }
 
@@ -192,6 +198,10 @@ function renderForTab(tab, hourly) {
 
   renderWindChart(labels, isoTimes,
     chartIdx.map(i => Math.round(hourly.wind_speed_10m?.[i] ?? 0)),
+    nowIdx, midnightIdx)
+
+  renderTempChart(labels, isoTimes,
+    chartIdx.map(i => Math.round((hourly.temperature_2m?.[i] ?? 0) * 10) / 10),
     nowIdx, midnightIdx)
 }
 
