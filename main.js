@@ -9,6 +9,11 @@ import {
 
 const $ = id => document.getElementById(id)
 
+// ── Tab state ─────────────────────────────────────────────
+// Declared early so applyTheme can reference cachedData without TDZ error
+let activeTab = 'heute'
+let cachedData = null   // last successful API response
+
 // ── Dark mode ─────────────────────────────────────────────
 const themeToggle = $('theme-toggle')
 
@@ -58,11 +63,6 @@ function get24hIndices(times, targetDate) {
     return acc
   }, [])
 }
-
-// ── Tab state ─────────────────────────────────────────────
-// 'heute' | 'morgen'
-let activeTab = 'heute'
-let cachedData = null   // last successful API response
 
 function defaultTab() {
   const now = new Date()
