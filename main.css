@@ -1,14 +1,12 @@
 /* ═══════════════════════════════════════════════════════════
-   UV & Weather · Landsberied
-   Editorial-scientific light mode — v2
-   Instrument Serif × IBM Plex Mono
-   Mobile-first, two-column at 768 px
+   Frischlinge · UV & Wetter
+   Editorial light mode — v3
+   Syne (brand) × Instrument Serif (display) × IBM Plex Mono (data)
+   Mobile-first; 3-col chart grid at 768 px
    ═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=Syne:wght@600;700;800&display=swap');
 
-/* Animated custom property — enables interpolated UV color
-   transitions across the radial glow, number, and label     */
 @property --accent {
   syntax: '<color>';
   inherits: true;
@@ -17,27 +15,26 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Design tokens ──────────────────────────────────────── */
+/* ── Tokens ─────────────────────────────────────────────── */
 :root {
-  --paper:        #f7f4ee;   /* warm off-white base          */
-  --paper-card:   #fdfcf8;   /* card surface                 */
-  --ink:          #1a1814;   /* near-black, warm             */
-  --ink-2:        #57534e;   /* secondary text               */
-  --ink-3:        #a8a29e;   /* muted / labels               */
-  --rule:         #e2ddd6;   /* hairline dividers            */
-  --rule-strong:  #c4bdb4;   /* header / footer rules        */
+  --paper:       #f7f4ee;
+  --card:        #ffffff;
+  --ink:         #1a1814;
+  --ink-2:       #57534e;
+  --ink-3:       #9c9488;
+  --rule:        #e8e4dc;
+  --gap:         20px;
 
-  /* UV semantic accent — shifts with risk level             */
-  --uv-low:       #3d7a4e;   /* sage green      < 3          */
-  --uv-moderate:  #9c6d0e;   /* warm amber      3–6          */
-  --uv-high:      #b34214;   /* burnt sienna    6–8          */
-  --uv-very-high: #9b2113;   /* deep red        8–11         */
-  --uv-extreme:   #6b2a96;   /* violet          > 11         */
+  --uv-low:      #3d7a4e;
+  --uv-moderate: #9c6d0e;
+  --uv-high:     #b34214;
+  --uv-very-high:#9b2113;
+  --uv-extreme:  #6b2a96;
 }
 
 html { font-size: 16px; }
 
-/* ── Body + paper grain ─────────────────────────────────── */
+/* ── Body + noise ───────────────────────────────────────── */
 body {
   background: var(--paper);
   color: var(--ink);
@@ -50,127 +47,125 @@ body {
     env(safe-area-inset-left);
 }
 
-/* SVG fractalNoise grain overlay — tactile paper texture    */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.028;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 256px 256px;
 }
 
 /* ── App shell ──────────────────────────────────────────── */
 #app {
-  max-width: 540px;
+  max-width: 600px;
   margin: 0 auto;
   padding: 0 1.25rem 2.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: var(--gap);
 }
 
-/* ── Header ─────────────────────────────────────────────── */
+/* ── Header — Frischlinge identity ─────────────────────── */
 header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  padding: 1.25rem 0 1rem;
-  border-bottom: 1px solid var(--rule-strong);
+  align-items: center;
+  padding: 1.25rem 0 1.1rem;
+  border-bottom: 1.5px solid var(--rule);
 }
 
-.location {
+.brand {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.625rem;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink);
+  gap: 0.45rem;
 }
 
-.location-icon { opacity: 0.55; }
+.brand-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.brand-name {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.55rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.header-location {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--ink-2);
+}
 
 .last-updated {
-  font-size: 0.575rem;
-  color: var(--ink-3);
   font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.54rem;
+  color: var(--ink-3);
   letter-spacing: 0.06em;
 }
 
-/* ── Main container ─────────────────────────────────────── */
+/* ── Main ───────────────────────────────────────────────── */
 main {
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: var(--gap);
 }
 
-/* ── Responsive grid ────────────────────────────────────── */
-/* Mobile: single column (default)                          */
-.layout-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-.col-primary,
-.col-secondary {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-/* ── Cards ──────────────────────────────────────────────── */
+/* ── Card base ──────────────────────────────────────────── */
 .card {
-  background: var(--paper-card);
-  border: 1px solid var(--rule);
-  border-radius: 2px;
-  padding: 1.25rem;
+  background: var(--card);
+  border: 1.5px solid var(--rule);
+  border-radius: 16px;
+  padding: 20px;
   position: relative;
   overflow: hidden;
-  box-shadow:
-    0 1px 0 rgba(26, 24, 20, 0.03),
-    0 2px 10px rgba(26, 24, 20, 0.05);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 .card-label {
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 0.56rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ink-3);
-  font-family: 'IBM Plex Mono', monospace;
   font-weight: 400;
   margin-bottom: 1rem;
   padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--rule);
 }
 
-/* ── UV Card ────────────────────────────────────────────── */
+/* ── UV summary card ────────────────────────────────────── */
 .uv-card {
-  padding: 1.5rem 1.5rem 1.25rem;
   --accent: var(--uv-low);
   transition: --accent 0.6s ease;
 }
 
-/* Radial accent wash behind the UV number                  */
 .uv-card::before {
   content: '';
   position: absolute;
-  top: -80px;
-  right: -80px;
-  width: 340px;
-  height: 340px;
+  top: -80px; right: -80px;
+  width: 320px; height: 320px;
   border-radius: 50%;
   background: radial-gradient(circle, var(--accent) 0%, transparent 60%);
   opacity: 0.12;
   pointer-events: none;
 }
 
-/* One property drives glow + number + label simultaneously */
 .uv-card[data-level="low"]       { --accent: var(--uv-low); }
 .uv-card[data-level="moderate"]  { --accent: var(--uv-moderate); }
 .uv-card[data-level="high"]      { --accent: var(--uv-high); }
@@ -181,11 +176,10 @@ main {
   display: flex;
   align-items: baseline;
   gap: 0.875rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.875rem;
   position: relative;
 }
 
-/* Instrument Serif display number — centrepiece            */
 .uv-value {
   font-family: 'Instrument Serif', serif;
   font-size: 4rem;
@@ -196,122 +190,159 @@ main {
   font-variant-numeric: tabular-nums;
 }
 
-/* Italic serif level label — caption to the big number    */
 .uv-level {
   font-family: 'Instrument Serif', serif;
   font-size: 1.2rem;
   font-style: italic;
-  font-weight: 400;
   color: var(--accent);
   line-height: 1.1;
-  opacity: 0.9;
+  opacity: 0.88;
 }
 
 .uv-advice {
-  font-size: 0.68rem;
-  color: var(--ink-2);
   font-family: 'IBM Plex Mono', monospace;
-  margin-bottom: 0.45rem;
-  letter-spacing: 0.025em;
-  line-height: 1.55;
+  font-size: 0.67rem;
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  margin-bottom: 0.35rem;
 }
 
 .uv-peak {
-  font-size: 0.575rem;
-  color: var(--ink-3);
   font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.56rem;
+  color: var(--ink-3);
   letter-spacing: 0.07em;
 }
 
-/* ── Chart card ─────────────────────────────────────────── */
-.chart-card {
-  padding: 1rem 1.25rem 1.1rem;
+/* ── HEUTE box ──────────────────────────────────────────── */
+.heute-box {
+  background: var(--card);
+  border: 1.5px solid var(--rule);
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.heute-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Action items — flex row: icon | text | value-right */
+.action-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  line-height: 1.8;
+  cursor: default;
+  transition: background 150ms ease;
+}
+
+.action-item:hover {
+  background: #f0ece4;
+}
+
+.action-item__icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 1.5rem;
+  text-align: center;
+}
+
+.action-item__text {
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  font-size: 1.0rem;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+}
+
+.action-item__value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--ink-2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Calm-day item: slightly muted, accent tick on left */
+.action-item--calm .action-item__text {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+/* ── Charts grid — stacked mobile, 3-col desktop ────────── */
+.charts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.chart-panel {
+  background: var(--card);
+  border: 1.5px solid var(--rule);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.chart-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 12px;
 }
 
 .chart-wrapper {
   position: relative;
-  height: 160px;          /* mobile                         */
-}
-
-/* ── Action cards ───────────────────────────────────────── */
-#action-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.action-card {
-  background: var(--paper-card);
-  border: 1px solid var(--rule);
-  border-radius: 2px;
-  padding: 0.875rem 1rem;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  box-shadow:
-    0 1px 0 rgba(26, 24, 20, 0.03),
-    0 2px 8px rgba(26, 24, 20, 0.04);
-  /* Start invisible — stagger delay set inline by JS       */
-  opacity: 0;
-  animation: actionCardIn 0.35s ease forwards;
-}
-
-/* Calm-day variant: left accent in sage green              */
-.action-card--calm {
-  border-left: 2px solid var(--uv-low);
-}
-
-.action-icon {
-  font-size: 1.05rem;
-  line-height: 1.6;
-  flex-shrink: 0;
-}
-
-.action-text {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.72rem;
-  color: var(--ink-2);
-  line-height: 1.55;
-  letter-spacing: 0.02em;
-  padding-top: 0.1rem;
-}
-
-@keyframes actionCardIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0);   }
+  height: 160px;
 }
 
 /* ── Alert banner ───────────────────────────────────────── */
-/* Urgency: bold left border + pulsing icon                 */
 .alert-banner {
   background: #fff2f0;
-  border: 1px solid #deb4ae;
+  border: 1.5px solid #deb4ae;
   border-left: 3px solid #c0392b;
-  border-radius: 2px;
-  padding: 0.825rem 1rem;
+  border-radius: 10px;
+  padding: 14px 16px;
   display: flex;
   align-items: flex-start;
   gap: 0.7rem;
-  font-size: 0.675rem;
   font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
   color: #7d1a10;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.02em;
   line-height: 1.55;
   font-weight: 500;
+  box-shadow: 0 2px 12px rgba(192, 57, 43, 0.08);
 }
 
 .alert-banner.hidden { display: none; }
 
 .alert-icon {
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   flex-shrink: 0;
-  padding-top: 0.06rem;
   animation: alertPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes alertPulse {
   0%, 100% { transform: scale(1);    opacity: 1;   }
-  50%       { transform: scale(1.2); opacity: 0.7; }
+  50%       { transform: scale(1.18); opacity: 0.7; }
 }
 
 /* ── Footer ─────────────────────────────────────────────── */
@@ -319,25 +350,25 @@ footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.875rem 0 0.5rem;
+  padding: 0.875rem 0 0.25rem;
   border-top: 1px solid var(--rule);
 }
 
 .refresh-btn {
   background: transparent;
-  border: 1px solid var(--rule-strong);
+  border: 1.5px solid var(--rule);
   color: var(--ink-2);
-  padding: 0.45rem 0.875rem;
-  border-radius: 2px;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 0.575rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
-  font-family: 'IBM Plex Mono', monospace;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
 .refresh-btn:hover {
@@ -346,9 +377,6 @@ footer {
   background: rgba(26, 24, 20, 0.03);
 }
 
-.refresh-btn:active { background: rgba(26, 24, 20, 0.065); }
-
-/* .refresh-icon injected by animations.js                 */
 .refresh-icon {
   display: inline-block;
   font-size: 0.9rem;
@@ -365,13 +393,13 @@ footer {
 }
 
 .data-source {
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 0.55rem;
   color: var(--ink-3);
-  font-family: 'IBM Plex Mono', monospace;
   letter-spacing: 0.07em;
 }
 
-/* ── Loading state ──────────────────────────────────────── */
+/* ── Loading ────────────────────────────────────────────── */
 .loading .uv-value,
 .loading .uv-level {
   opacity: 0.18;
@@ -383,8 +411,19 @@ footer {
   50%       { opacity: 0.38; }
 }
 
+/* ── Action item entry animation ────────────────────────── */
+@keyframes actionIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.action-item {
+  opacity: 0;
+  animation: actionIn 0.3s ease forwards;
+}
+
 /* ════════════════════════════════════════════════════════
-   Desktop — two-column layout at 768 px
+   Desktop ≥ 768px
    ════════════════════════════════════════════════════════ */
 @media (min-width: 768px) {
 
@@ -393,35 +432,34 @@ footer {
     padding: 0 2rem 3rem;
   }
 
-  /* Two equal columns, top-aligned                        */
-  .layout-grid {
+  /* UV card + HEUTE side by side */
+  .top-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    gap: var(--gap);
     align-items: start;
   }
 
-  .col-primary,
-  .col-secondary {
-    gap: 1.25rem;
+  /* HEUTE box full-width would override — keep it stacked
+     unless we wrap the UV card in .top-grid in HTML.
+     Here the HEUTE box just follows the UV card naturally. */
+
+  /* 3-column chart row */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--gap);
   }
 
-  /* Taller chart on desktop                               */
   .chart-wrapper {
-    height: 260px;
+    height: 180px;
   }
 
-  /* UV value scales up                                    */
   .uv-value {
     font-size: 5.5rem;
   }
 
   .uv-level {
-    font-size: 1.5rem;
-  }
-
-  /* Action cards slightly larger text on wider screens    */
-  .action-text {
-    font-size: 0.78rem;
+    font-size: 1.45rem;
   }
 }
