@@ -31,26 +31,110 @@ function xAxis(labels, isoTimes) {
   }
 }
 
-// Theme-aware tooltip — called at chart render time so dark mode is current
-function makeTooltip(labelFn) {
-  const dark = document.documentElement.getAttribute('data-theme') === 'dark'
-  return {
-    enabled:         true,
-    backgroundColor: dark ? '#1e1c19' : '#ffffff',
-    titleColor:      dark ? '#f0ece4' : '#1a1814',
-    bodyColor:       dark ? '#b8b3aa' : '#57534e',
-    borderColor:     dark ? 'rgba(255,255,255,0.09)' : '#e8e4dc',
-    borderWidth:     1,
-    titleFont:       { family: MONO, size: 10 },
-    bodyFont:        { family: MONO, size: 10 },
-    padding:         10,
-    cornerRadius:    6,
-    callbacks: {
-      title: items => items[0]?.label ?? '',
-      label: labelFn,
-    },
-  }
+// ── Crosshair plugin (registered globally) ───────────────
+const crosshairPlugin = {
+  id: 'crosshair',
+  afterDraw(chart) {
+    const x = chart._crosshairX
+    if (x === undefined) return
+    const { ctx, chartArea: { top, bottom, left, right }, scales } = chart
+    if (x < left || x > right) return
+
+    const dark      = document.documentElement.getAttribute('data-theme') === 'dark'
+    const lineColor = dark ? 'rgba(255,255,255,0.28)' : 'rgba(26,24,20,0.22)'
+    const pillBg    = dark ? '#1e1c19' : '#ffffff'
+    const pillBord  = dark ? 'rgba(255,255,255,0.10)' : '#e8e4dc'
+    const textColor = dark ? '#f0ece4' : '#1a1814'
+
+    ctx.save()
+
+    // Dashed vertical line
+    ctx.beginPath()
+    ctx.moveTo(x, top)
+    ctx.lineTo(x, bottom)
+    ctx.lineWidth   = 1
+    ctx.strokeStyle = lineColor
+    ctx.setLineDash([4, 4])
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // Value pill per dataset
+    const xScale = scales.x
+    if (!xScale) { ctx.restore(); return }
+    const idx = Math.round(xScale.getValueForPixel(x))
+    if (idx < 0 || idx >= chart.data.labels.length) { ctx.restore(); return }
+
+    chart.data.datasets.forEach(ds => {
+      const val = ds.data[idx]
+      if (val == null) return
+      const yScale = scales[ds.yAxisID ?? 'y']
+      if (!yScale) return
+
+      const yPx  = yScale.getPixelForValue(val)
+      const label = chart._crosshairFmt ? chart._crosshairFmt(val) : String(val)
+
+      const PAD = 5
+      ctx.font = `400 10px ${MONO}`
+      const tw  = ctx.measureText(label).width
+      const bw  = tw + PAD * 2
+      const bh  = 16
+
+      // Clamp pill position inside chart area
+      let bx = Math.max(left, Math.min(right - bw, x - bw / 2))
+      let by = Math.max(top,  Math.min(bottom - bh, yPx - bh - 6))
+
+      ctx.fillStyle   = pillBg
+      ctx.strokeStyle = pillBord
+      ctx.lineWidth   = 1
+      ctx.beginPath()
+      ctx.roundRect(bx, by, bw, bh, 4)
+      ctx.fill()
+      ctx.stroke()
+
+      ctx.fillStyle    = textColor
+      ctx.textAlign    = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(label, bx + bw / 2, by + bh / 2)
+    })
+
+    ctx.restore()
+  },
 }
+Chart.register(crosshairPlugin)
+
+// Attach mouse/touch crosshair events to a chart canvas
+function attachCrosshair(canvas, chart, fmtFn) {
+  chart._crosshairFmt = fmtFn
+
+  const set = clientX => {
+    chart._crosshairX = clientX - canvas.getBoundingClientRect().left
+    chart.update('none')
+  }
+  const clear = () => {
+    delete chart._crosshairX
+    chart.update('none')
+  }
+
+  canvas.addEventListener('mousemove',  e => set(e.clientX))
+  canvas.addEventListener('mouseleave', clear)
+  canvas.addEventListener('touchmove',  e => { e.preventDefault(); set(e.touches[0].clientX) }, { passive: false })
+  canvas.addEventListener('touchend',   clear)
+}
+
+// Clear all crosshairs when user touches outside any chart
+document.addEventListener('touchstart', e => {
+  if (e.target.tagName !== 'CANVAS') {
+    for (const c of [
+      () => uvChart, () => rainChart, () => windChart, () => tempChart,
+    ]) {
+      const inst = c()
+      if (inst && inst._crosshairX !== undefined) {
+        delete inst._crosshairX
+        inst.update('none')
+      }
+    }
+  }
+}, { passive: true })
 
 // ── Threshold line plugin ────────────────────────────────
 // lines: [{ value, color, label, tickLabel? }]
@@ -310,8 +394,7 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 600, easing: 'easeInOutQuart' },
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: makeTooltip(item => `UV ${item.raw}`) },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
         x: xAxis(labels, isoTimes),
         y: { ...thresholdYAxis(UV_THRESHOLDS), min: 0, max: 12 },
@@ -330,6 +413,7 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       makeMidnightPlugin(midnightIdx),
     ],
   })
+  attachCrosshair(canvas, uvChart, v => `UV ${v}`)
 }
 
 // ── Rain chart — precipitation probability area ───────────
@@ -406,8 +490,7 @@ export function renderRainChart(labels, isoTimes, probData, nowIdx, midnightIdx)
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 600, easing: 'easeOutQuart' },
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: makeTooltip(item => `${item.raw}%`) },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
         x: xAxis(labels, isoTimes),
         y: {
@@ -423,6 +506,7 @@ export function renderRainChart(labels, isoTimes, probData, nowIdx, midnightIdx)
       makeMidnightPlugin(midnightIdx),
     ],
   })
+  attachCrosshair(canvas, rainChart, v => `${v}%`)
 }
 
 // ── Temperature chart ────────────────────────────────────
@@ -481,8 +565,7 @@ export function renderTempChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 600, easing: 'easeInOutQuart' },
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: makeTooltip(item => `${item.raw}°C`) },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
         x: xAxis(labels, isoTimes),
         y: {
@@ -504,6 +587,7 @@ export function renderTempChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       makeMidnightPlugin(midnightIdx),
     ],
   })
+  attachCrosshair(canvas, tempChart, v => `${v}°C`)
 }
 
 // ── Wind chart ───────────────────────────────────────────
@@ -569,8 +653,7 @@ export function renderWindChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 600, easing: 'easeInOutQuart' },
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: makeTooltip(item => `${item.raw} km/h`) },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
         x: xAxis(labels, isoTimes),
         y: { ...thresholdYAxis(activeThresholds), min: 0, max: yMax },
@@ -583,4 +666,5 @@ export function renderWindChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       makeMidnightPlugin(midnightIdx),
     ],
   })
+  attachCrosshair(canvas, windChart, v => `${v} km/h`)
 }

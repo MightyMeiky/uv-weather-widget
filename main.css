@@ -538,6 +538,22 @@ footer {
   line-height: 1.9;
 }
 
+.pwa-install__en {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.pwa-install__note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--ink-3);
+  font-style: italic;
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
 @media (min-width: 480px) {
   .pwa-install__platforms {
     flex-direction: row;

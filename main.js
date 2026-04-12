@@ -99,7 +99,7 @@ function renderHeuteSummary(hourly, windowIdx) {
     </div>
     <div class="heute-summary-cell">
       <span class="heute-summary-icon">🌧️</span>
-      <span class="heute-summary-value">${maxProb}%</span>
+      <span class="heute-summary-value">${Math.round(maxRain * 10) / 10}mm · ${maxProb}%</span>
     </div>
     <div class="heute-summary-cell">
       <span class="heute-summary-icon">💨</span>
