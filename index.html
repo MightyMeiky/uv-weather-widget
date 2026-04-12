@@ -26,28 +26,18 @@
 
     <main>
 
-      <!-- UV summary card -->
-      <section class="card uv-card" id="uv-card">
-        <div class="card-label">UV-Index</div>
-        <div class="uv-display">
-          <div class="uv-value" id="uv-value">–</div>
-          <div class="uv-level" id="uv-level">Laden…</div>
-        </div>
-        <div class="uv-advice" id="uv-advice"></div>
-        <div class="uv-peak" id="uv-peak"></div>
-      </section>
-
       <!-- HEUTE action box -->
       <section class="heute-box" id="heute-box">
         <div class="heute-label" id="heute-label">HEUTE</div>
         <div id="action-items"></div>
+        <div class="heute-summary" id="heute-summary"></div>
       </section>
 
       <!-- Three charts — always visible -->
       <div class="charts-grid">
 
         <div class="chart-panel">
-          <div class="chart-title">UV-Index</div>
+          <div class="chart-title">UV-Verlauf</div>
           <div class="chart-wrapper">
             <canvas id="uv-chart"></canvas>
           </div>

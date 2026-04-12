@@ -91,7 +91,7 @@ header {
 .brand-name {
   font-family: 'Syne', sans-serif;
   font-weight: 800;
-  font-size: 1.55rem;
+  font-size: 1.4rem;
   letter-spacing: -0.02em;
   color: var(--ink);
   line-height: 1;
@@ -147,72 +147,6 @@ main {
   margin-bottom: 1rem;
   padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--rule);
-}
-
-/* ── UV summary card ────────────────────────────────────── */
-.uv-card {
-  --accent: var(--uv-low);
-  transition: --accent 0.6s ease;
-}
-
-.uv-card::before {
-  content: '';
-  position: absolute;
-  top: -80px; right: -80px;
-  width: 320px; height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent) 0%, transparent 60%);
-  opacity: 0.12;
-  pointer-events: none;
-}
-
-.uv-card[data-level="low"]       { --accent: var(--uv-low); }
-.uv-card[data-level="moderate"]  { --accent: var(--uv-moderate); }
-.uv-card[data-level="high"]      { --accent: var(--uv-high); }
-.uv-card[data-level="very-high"] { --accent: var(--uv-very-high); }
-.uv-card[data-level="extreme"]   { --accent: var(--uv-extreme); }
-
-.uv-display {
-  display: flex;
-  align-items: baseline;
-  gap: 0.875rem;
-  margin-bottom: 0.875rem;
-  position: relative;
-}
-
-.uv-value {
-  font-family: 'Instrument Serif', serif;
-  font-size: 4rem;
-  font-weight: 400;
-  line-height: 0.88;
-  color: var(--accent);
-  letter-spacing: -0.015em;
-  font-variant-numeric: tabular-nums;
-}
-
-.uv-level {
-  font-family: 'Instrument Serif', serif;
-  font-size: 1.2rem;
-  font-style: italic;
-  color: var(--accent);
-  line-height: 1.1;
-  opacity: 0.88;
-}
-
-.uv-advice {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.67rem;
-  color: var(--ink-2);
-  letter-spacing: 0.02em;
-  line-height: 1.6;
-  margin-bottom: 0.35rem;
-}
-
-.uv-peak {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.56rem;
-  color: var(--ink-3);
-  letter-spacing: 0.07em;
 }
 
 /* ── HEUTE box ──────────────────────────────────────────── */
@@ -284,6 +218,18 @@ main {
   font-weight: 600;
 }
 
+/* ── HEUTE summary line ─────────────────────────────────── */
+.heute-summary {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
 /* ── Charts grid — stacked mobile, 3-col desktop ────────── */
 .charts-grid {
   display: flex;
@@ -300,11 +246,12 @@ main {
 }
 
 .chart-title {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.58rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink-3);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
   margin-bottom: 12px;
 }
 
@@ -455,11 +402,4 @@ footer {
     height: 180px;
   }
 
-  .uv-value {
-    font-size: 5.5rem;
-  }
-
-  .uv-level {
-    font-size: 1.45rem;
-  }
 }
