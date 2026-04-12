@@ -26,7 +26,7 @@ export async function fetchWeatherData() {
       'uv_index',
     ].join(','),
     timezone: 'Europe/Berlin',
-    forecast_days: 1,
+    forecast_days: 2,
   })
 
   const res = await fetch(`${BASE}?${params}`)

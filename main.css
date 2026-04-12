@@ -230,6 +230,17 @@ main {
   border-top: 1px solid var(--rule);
 }
 
+/* ── Weekend greeting ───────────────────────────────────── */
+.heute-weekend-greeting {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
 /* ── Charts grid — stacked mobile, 3-col desktop ────────── */
 .charts-grid {
   display: flex;
