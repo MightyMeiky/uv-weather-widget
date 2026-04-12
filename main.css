@@ -1,217 +1,363 @@
-/* Google Font */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono&display=swap');
+/* ═══════════════════════════════════════════════════════════
+   UV & Weather · Landsberied
+   Editorial-scientific light mode
+   Instrument Serif × IBM Plex Mono
+   ═══════════════════════════════════════════════════════════ */
 
-/* ── Reset & Base ── */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap');
+
+/* Registered custom property — enables smooth color transitions
+   on var(--accent) across all child elements                  */
+@property --accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #3d7a4e;
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Design tokens ──────────────────────────────────────── */
 :root {
-  --bg: #0f0f1a;
-  --surface: #1a1a2e;
-  --surface-2: #22223b;
-  --border: rgba(255,255,255,0.08);
-  --text: #f0f0f5;
-  --text-muted: #8888aa;
-  --accent: #c8f542;
+  --paper:        #f7f5f0;   /* warm paper base              */
+  --paper-card:   #fdfcf8;   /* card surface                 */
+  --ink:          #1c1917;   /* near-black, warm             */
+  --ink-2:        #57534e;   /* secondary text               */
+  --ink-3:        #a8a29e;   /* muted / labels               */
+  --rule:         #e2ddd6;   /* thin dividers                */
+  --rule-strong:  #c4bdb4;   /* header / footer rules        */
 
-  /* UV colors */
-  --uv-low:      #4ade80;
-  --uv-moderate: #facc15;
-  --uv-high:     #fb923c;
-  --uv-very-high:#f87171;
-  --uv-extreme:  #c084fc;
+  /* UV accent — each level maps to a distinct hue family    */
+  --uv-low:       #3d7a4e;   /* sage green                   */
+  --uv-moderate:  #9c6d0e;   /* warm amber                   */
+  --uv-high:      #b34214;   /* burnt sienna                 */
+  --uv-very-high: #9b2113;   /* deep red                     */
+  --uv-extreme:   #6b2a96;   /* violet                       */
 }
 
 html { font-size: 16px; }
 
+/* ── Body + paper noise texture ────────────────────────── */
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'IBM Plex Mono', monospace;
   min-height: 100dvh;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
 }
 
-/* ── Layout ── */
+/* Grain overlay — SVG fractalNoise for tactile paper depth  */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+/* ── Layout ─────────────────────────────────────────────── */
 #app {
   max-width: 480px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0 1.25rem 2rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.875rem;
 }
 
-/* ── Header ── */
+/* ── Header ─────────────────────────────────────────────── */
 header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
+  align-items: baseline;
+  padding: 1.25rem 0 1rem;
+  border-bottom: 1px solid var(--rule-strong);
 }
 
 .location {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.625rem;
   font-weight: 500;
-  font-size: 1rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.location-icon {
+  opacity: 0.55;
+  font-style: normal;
 }
 
 .last-updated {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-family: 'DM Mono', monospace;
+  font-size: 0.575rem;
+  color: var(--ink-3);
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.06em;
 }
 
-/* ── Cards ── */
+/* ── Cards ──────────────────────────────────────────────── */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
   padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 rgba(28, 25, 23, 0.03),
+    0 2px 10px rgba(28, 25, 23, 0.05);
 }
 
 .card-label {
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
+  font-size: 0.56rem;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 0.75rem;
+  color: var(--ink-3);
+  font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  font-weight: 400;
 }
 
-/* ── UV Card ── */
+/* ── UV Card ────────────────────────────────────────────── */
+.uv-card {
+  padding: 1.5rem 1.5rem 1.25rem;
+  --accent: var(--uv-low);          /* default before data loads */
+  transition: --accent 0.6s ease;   /* animates the registered property */
+}
+
+/* Accent glow — radial wash behind the UV number            */
+.uv-card::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 60%);
+  opacity: 0.09;
+  pointer-events: none;
+  /* --accent is registered, so this gradient interpolates   */
+}
+
+/* UV level → accent color (drives glow + text in one shot) */
+.uv-card[data-level="low"]       { --accent: var(--uv-low); }
+.uv-card[data-level="moderate"]  { --accent: var(--uv-moderate); }
+.uv-card[data-level="high"]      { --accent: var(--uv-high); }
+.uv-card[data-level="very-high"] { --accent: var(--uv-very-high); }
+.uv-card[data-level="extreme"]   { --accent: var(--uv-extreme); }
+
 .uv-display {
   display: flex;
   align-items: baseline;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: 0.875rem;
+  margin-bottom: 1rem;
+  position: relative;
 }
 
+/* The centrepiece — large Instrument Serif display number   */
 .uv-value {
-  font-size: 4rem;
-  font-weight: 700;
-  line-height: 1;
-  transition: color 0.5s ease;
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(5rem, 18vw, 6.75rem);
+  font-weight: 400;
+  line-height: 0.88;
+  color: var(--accent);
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
 }
 
+/* Italic serif level label — caption to the big number      */
 .uv-level {
-  font-size: 1.2rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  transition: color 0.5s ease;
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.3rem;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent);
+  line-height: 1.1;
+  padding-bottom: 0.15em;
+  opacity: 0.9;
 }
 
 .uv-advice {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  margin-bottom: 0.4rem;
-  min-height: 1.2em;
+  font-size: 0.68rem;
+  color: var(--ink-2);
+  font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 0.45rem;
+  letter-spacing: 0.025em;
+  line-height: 1.55;
 }
 
 .uv-peak {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-family: 'DM Mono', monospace;
+  font-size: 0.575rem;
+  color: var(--ink-3);
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.07em;
 }
 
-/* UV color states */
-.uv-card[data-level="low"]       .uv-value,
-.uv-card[data-level="low"]       .uv-level { color: var(--uv-low); }
-.uv-card[data-level="moderate"]  .uv-value,
-.uv-card[data-level="moderate"]  .uv-level { color: var(--uv-moderate); }
-.uv-card[data-level="high"]      .uv-value,
-.uv-card[data-level="high"]      .uv-level { color: var(--uv-high); }
-.uv-card[data-level="very-high"] .uv-value,
-.uv-card[data-level="very-high"] .uv-level { color: var(--uv-very-high); }
-.uv-card[data-level="extreme"]   .uv-value,
-.uv-card[data-level="extreme"]   .uv-level { color: var(--uv-extreme); }
+/* ── Chart Cards ────────────────────────────────────────── */
+.chart-card {
+  padding: 1rem 1.25rem 1.1rem;
+}
 
-/* ── Chart ── */
 .chart-wrapper {
   position: relative;
-  height: 140px;
+  height: 115px;
 }
 
-/* ── Weather Grid ── */
+/* ── Weather Grid ───────────────────────────────────────── */
+.weather-card { padding: 1.25rem; }
+
 .weather-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
-  text-align: center;
 }
 
 .weather-item {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.2rem 0.2rem;
+  border-right: 1px solid var(--rule);
+  text-align: center;
 }
 
+.weather-item:last-child { border-right: none; }
+
 .weather-icon {
-  font-size: 1.75rem;
+  font-size: 1.35rem;
+  line-height: 1.3;
 }
 
 .weather-value {
-  font-size: 1rem;
-  font-weight: 600;
-  font-family: 'DM Mono', monospace;
+  font-size: 0.825rem;
+  font-weight: 500;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--ink);
+  letter-spacing: -0.03em;
 }
 
 .weather-label {
-  font-size: 0.65rem;
-  color: var(--text-muted);
+  font-size: 0.495rem;
+  color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
+  font-family: 'IBM Plex Mono', monospace;
+  line-height: 1.4;
 }
 
-/* ── Alert Banner ── */
+/* ── Alert Banner ───────────────────────────────────────── */
+/* Urgent — newspaper stop-press energy, not decorative     */
 .alert-banner {
-  background: rgba(248, 113, 113, 0.15);
-  border: 1px solid rgba(248, 113, 113, 0.4);
-  border-radius: 12px;
-  padding: 0.875rem 1rem;
+  background: #fff2f0;
+  border: 1px solid #deb4ae;
+  border-left: 3px solid #c0392b;
+  border-radius: 2px;
+  padding: 0.825rem 1rem;
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.875rem;
+  align-items: flex-start;
+  gap: 0.7rem;
+  font-size: 0.675rem;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #7d1a10;
+  letter-spacing: 0.025em;
+  line-height: 1.55;
+  font-weight: 500;
 }
 
 .alert-banner.hidden { display: none; }
 
-/* ── Footer ── */
+.alert-icon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+  padding-top: 0.06rem;
+  animation: alertPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes alertPulse {
+  0%, 100% { transform: scale(1);    opacity: 1;   }
+  50%       { transform: scale(1.2); opacity: 0.7; }
+}
+
+/* ── Footer ─────────────────────────────────────────────── */
 footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0 1rem;
+  padding: 0.875rem 0 0.5rem;
+  border-top: 1px solid var(--rule);
+  margin-top: 0.125rem;
 }
 
 .refresh-btn {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  color: var(--ink-2);
+  padding: 0.45rem 0.875rem;
+  border-radius: 2px;
+  font-size: 0.575rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   cursor: pointer;
-  font-family: inherit;
-  transition: background 0.2s;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
-.refresh-btn:hover { background: var(--surface); }
+.refresh-btn:hover {
+  border-color: var(--ink-2);
+  color: var(--ink);
+  background: rgba(28, 25, 23, 0.03);
+}
+
+.refresh-btn:active {
+  background: rgba(28, 25, 23, 0.065);
+}
+
+/* .refresh-icon span is injected by animations.js          */
+.refresh-icon {
+  display: inline-block;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.refresh-btn.spinning .refresh-icon {
+  animation: spinCW 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes spinCW {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
 
 .data-source {
-  font-size: 0.7rem;
-  color: var(--text-muted);
+  font-size: 0.55rem;
+  color: var(--ink-3);
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.07em;
 }
 
-/* ── Loading state ── */
+/* ── Loading state ──────────────────────────────────────── */
 .loading .uv-value,
 .loading .uv-level {
-  opacity: 0.3;
-  animation: pulse 1.5s infinite;
+  opacity: 0.18;
+  animation: shimmer 1.6s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
+@keyframes shimmer {
+  0%, 100% { opacity: 0.18; }
+  50%       { opacity: 0.38; }
 }

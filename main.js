@@ -1,4 +1,5 @@
 import './main.css'
+import './animations.js'
 import { fetchWeatherData } from './api.js'
 import { renderUvChart, renderRainChart } from './charts.js'
 import {
