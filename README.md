@@ -1,4 +1,4 @@
-# UV & Weather Widget — Landsberied
+# Frischlingswetter — Landsberied
 
 PWA showing UV index, rain probability and thunderstorm alerts for Landsberied, Bavaria.
 

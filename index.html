@@ -7,8 +7,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
-  <title>Frischlinge · UV & Wetter</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐗</text></svg>" />
+  <title>Frischlingswetter</title>
+  <!-- No-flash dark mode: apply theme before first paint -->
+  <script>
+    (function() {
+      const t = localStorage.getItem('theme')
+      if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark')
+    })()
+  </script>
   <link rel="stylesheet" href="/main.css" />
 </head>
 <body>
@@ -17,19 +24,24 @@
     <header>
       <div class="brand">
         <span class="brand-icon">🐗</span>
-        <span class="brand-name">Frischlinge</span>
+        <span class="brand-name">Frischlingswetter</span>
       </div>
       <div class="header-right">
         <span class="header-location">📍 Landsberied</span>
         <span class="last-updated" id="last-updated">–</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Dark mode umschalten">☀️</button>
       </div>
     </header>
 
     <main>
 
-      <!-- HEUTE action box -->
+      <!-- HEUTE box with tab switcher -->
       <section class="heute-box" id="heute-box">
-        <div class="heute-label" id="heute-label">HEUTE</div>
+        <div class="tab-bar">
+          <button class="tab" data-day="heute">Heute</button>
+          <button class="tab" data-day="morgen">Morgen</button>
+        </div>
+        <div class="heute-label" id="heute-label">HEUTE · 8–14 Uhr</div>
         <div id="action-items"></div>
         <div class="heute-summary" id="heute-summary"></div>
       </section>
@@ -70,7 +82,10 @@
 
     <footer>
       <button class="refresh-btn" id="refresh-btn">↻ Aktualisieren</button>
-      <span class="data-source">Daten: Open-Meteo</span>
+      <div class="footer-right">
+        <span class="data-source">Daten: Open-Meteo</span>
+        <span class="built-by">gebaut von Jonte &amp; Meike 🐗</span>
+      </div>
     </footer>
 
   </div>

@@ -6,8 +6,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'UV & Weather Widget',
-        short_name: 'UV Widget',
+        name: 'Frischlingswetter',
+        short_name: 'Frischlinge',
         description: 'UV index and weather for Landsberied',
         theme_color: '#1a1a2e',
         background_color: '#1a1a2e',

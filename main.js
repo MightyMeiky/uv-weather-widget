@@ -9,77 +9,95 @@ import {
 
 const $ = id => document.getElementById(id)
 
-// ── Day mode ──────────────────────────────────────────────
-// Returns: 'heute' | 'morgen' | 'wochenende'
-function getDayMode(now = new Date()) {
-  const dow = now.getDay()  // 0=Sun, 6=Sat
-  if (dow === 0 || dow === 6) return 'wochenende'
-  return now.getHours() < 14 ? 'heute' : 'morgen'
+// ── Dark mode ─────────────────────────────────────────────
+const themeToggle = $('theme-toggle')
+
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+  if (!dark) document.documentElement.removeAttribute('data-theme')
+  themeToggle.textContent = dark ? '🌙' : '☀️'
+  localStorage.setItem('theme', dark ? 'dark' : 'light')
 }
 
-// ── Get indices for a given dateStr + hour window ─────────
-function getWindowIndices(hourlyTimes, dateStr, startH, endH) {
-  return hourlyTimes.reduce((acc, t, i) => {
-    if (!t.startsWith(dateStr)) return acc
-    const h = new Date(t).getHours()
-    if (h >= startH && h <= endH) acc.push(i)
-    return acc
-  }, [])
+themeToggle.addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+  applyTheme(!isDark)
+})
+
+// Sync button icon with whatever the no-flash script already applied
+applyTheme(document.documentElement.getAttribute('data-theme') === 'dark')
+
+// ── Day helpers ───────────────────────────────────────────
+function isWeekend(d = new Date()) {
+  return d.getDay() === 0 || d.getDay() === 6
 }
 
 function dateStr(d) {
   return d.toISOString().slice(0, 10)
 }
 
-function tomorrow() {
+function tomorrowDate() {
   const d = new Date()
   d.setDate(d.getDate() + 1)
   return d
 }
 
-// ── 48-hour indices (today + tomorrow, 0–23h each) ────────
-function get48hIndices(hourlyTimes) {
-  const todayS    = dateStr(new Date())
-  const tomorrowS = dateStr(tomorrow())
-  return hourlyTimes.reduce((acc, t, i) => {
-    if (t.startsWith(todayS) || t.startsWith(tomorrowS)) acc.push(i)
+function getWindowIndices(times, targetDate, startH, endH) {
+  return times.reduce((acc, t, i) => {
+    if (!t.startsWith(targetDate)) return acc
+    const h = new Date(t).getHours()
+    if (h >= startH && h <= endH) acc.push(i)
     return acc
   }, [])
 }
 
-// ── HEUTE label ───────────────────────────────────────────
-function boxLabel(mode, hourly, windowIdx) {
-  if (mode === 'wochenende') return 'WOCHENENDE · ganzer Tag'
-  if (mode === 'morgen')     return 'MORGEN · 8–14 Uhr'
-
-  // Weekday today before 14:00 — show UV exposure window
-  const uvHours = windowIdx.filter(i => (hourly.uv_index[i] ?? 0) >= 3)
-  if (!uvHours.length) return 'HEUTE · 8–14 Uhr'
-  const fmt = i => new Date(hourly.time[i])
-    .toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-  return `HEUTE · ${fmt(uvHours[0])}–${fmt(uvHours[uvHours.length - 1])} Uhr`
+function get24hIndices(times, targetDate) {
+  return times.reduce((acc, t, i) => {
+    if (t.startsWith(targetDate)) acc.push(i)
+    return acc
+  }, [])
 }
 
-// ── Summary line — max values for the window ──────────────
-function renderHeuteSummary(hourly, windowIdx) {
-  const maxUv   = Math.max(...windowIdx.map(i => hourly.uv_index[i]        ?? 0))
-  const maxRain = Math.max(...windowIdx.map(i => hourly.precipitation?.[i]  ?? 0))
-  const maxWind = Math.max(...windowIdx.map(i => hourly.wind_speed_10m?.[i] ?? 0))
+// ── Tab state ─────────────────────────────────────────────
+// 'heute' | 'morgen'
+let activeTab = 'heute'
+let cachedData = null   // last successful API response
 
+function defaultTab() {
+  const now = new Date()
+  // Weekend always Heute; weekday after 14:00 → Morgen
+  if (isWeekend(now)) return 'heute'
+  return now.getHours() < 14 ? 'heute' : 'morgen'
+}
+
+// ── HEUTE box rendering ───────────────────────────────────
+
+function boxLabel(tab, hourly, windowIdx) {
+  const now = new Date()
+  if (isWeekend(now) && tab === 'heute') return 'WOCHENENDE · ganzer Tag'
+  const prefix = tab === 'heute' ? 'HEUTE' : 'MORGEN'
+  const uvHours = windowIdx.filter(i => (hourly.uv_index[i] ?? 0) >= 3)
+  if (!uvHours.length) return `${prefix} · 8–14 Uhr`
+  const fmt = i => new Date(hourly.time[i])
+    .toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  return `${prefix} · ${fmt(uvHours[0])}–${fmt(uvHours[uvHours.length - 1])} Uhr`
+}
+
+function renderHeuteSummary(hourly, windowIdx) {
+  const maxUv   = Math.max(...windowIdx.map(i => hourly.uv_index[i]        ?? 0), 0)
+  const maxRain = Math.max(...windowIdx.map(i => hourly.precipitation?.[i]  ?? 0), 0)
+  const maxWind = Math.max(...windowIdx.map(i => hourly.wind_speed_10m?.[i] ?? 0), 0)
   const parts = []
   if (maxUv   > 0) parts.push(`UV max ${Math.round(maxUv * 10) / 10}`)
   if (maxRain > 0) parts.push(`Regen max ${Math.round(maxRain * 10) / 10} mm`)
   if (maxWind > 0) parts.push(`Wind max ${Math.round(maxWind)} km/h`)
-
   $('heute-summary').textContent = parts.join(' · ')
 }
 
-// ── Action items ──────────────────────────────────────────
-function renderActionItems(hourly, windowIdx, mode) {
+function renderActionItems(hourly, windowIdx, tab) {
   const now   = new Date()
   const items = []
 
-  // 🧴 First hour UV ≥ 3 in window
   for (const i of windowIdx) {
     if ((hourly.uv_index[i] ?? 0) >= 3) {
       const t = new Date(hourly.time[i])
@@ -89,26 +107,18 @@ function renderActionItems(hourly, windowIdx, mode) {
     }
   }
 
-  // 🌧️ Rain > 40% — window start/end
   const wetIdx = windowIdx.filter(i => (hourly.precipitation_probability[i] ?? 0) > 40)
   if (wetIdx.length) {
-    const fmt  = i  => new Date(hourly.time[i])
+    const fmt  = i => new Date(hourly.time[i])
       .toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
     const maxP = Math.max(...wetIdx.map(i => hourly.precipitation_probability[i]))
-    items.push({
-      icon:  '🌧️',
-      text:  'Regenkleidung',
-      value: `${maxP}% ab ${fmt(wetIdx[0])}`,
-    })
+    items.push({ icon: '🌧️', text: 'Regenkleidung', value: `${maxP}% ab ${fmt(wetIdx[0])}` })
   }
 
-  // ⚠️ Storm: CAPE > 500 or WMO 95/96/99 — future only for heute, all for morgen/weekend
   for (const i of windowIdx) {
     const t = new Date(hourly.time[i])
-    if (mode === 'heute' && t <= now) continue
-    const isStorm  = [95, 96, 99].includes(hourly.weather_code[i])
-    const highCape = (hourly.cape?.[i] ?? 0) > 500
-    if (isStorm || highCape) {
+    if (tab === 'heute' && t <= now) continue
+    if ([95, 96, 99].includes(hourly.weather_code[i]) || (hourly.cape?.[i] ?? 0) > 500) {
       items.push({
         icon:  '⚠️',
         text:  'Gewitter möglich',
@@ -118,7 +128,6 @@ function renderActionItems(hourly, windowIdx, mode) {
     }
   }
 
-  // ☀️ All-clear
   if (!items.length) {
     items.push({ icon: '☀️', text: 'Entspannter Tag', value: 'kein Schutz nötig', calm: true })
   }
@@ -133,90 +142,98 @@ function renderActionItems(hourly, windowIdx, mode) {
       </div>`)
     .join('')
 
-  // Weekend greeting
-  const greeting = $('heute-weekend-greeting')
-  if (greeting) greeting.remove()
-  if (mode === 'wochenende') {
+  // Weekend greeting (Heute tab only on weekend)
+  const existing = $('heute-weekend-greeting')
+  if (existing) existing.remove()
+  if (isWeekend(new Date()) && tab === 'heute') {
     const div = document.createElement('div')
-    div.id        = 'heute-weekend-greeting'
+    div.id = 'heute-weekend-greeting'
     div.className = 'heute-weekend-greeting'
     div.textContent = '🐗 Schönes Wochenende!'
     $('heute-box').appendChild(div)
   }
 }
 
+// ── Render all charts for a given tab/day ─────────────────
+function renderForTab(tab, hourly) {
+  const now       = new Date()
+  const todayS    = dateStr(now)
+  const tomorrowS = dateStr(tomorrowDate())
+
+  // Which date the tab refers to
+  const targetDate = tab === 'morgen' ? tomorrowS : todayS
+
+  // Action box window: weekend = 6–20, weekday = 8–14
+  const [startH, endH] = (isWeekend(now) && tab === 'heute') ? [6, 20] : [8, 14]
+  const windowIdx = getWindowIndices(hourly.time, targetDate, startH, endH)
+
+  // Box
+  $('heute-label').textContent = boxLabel(tab, hourly, windowIdx)
+  renderActionItems(hourly, windowIdx, tab)
+  renderHeuteSummary(hourly, windowIdx)
+
+  // Charts: full 24h of the selected day
+  const chartIdx   = get24hIndices(hourly.time, targetDate)
+  const labels     = chartIdx.map(i =>
+    new Date(hourly.time[i]).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  )
+  const isoTimes   = chartIdx.map(i => hourly.time[i])
+  const nowIdx     = tab === 'heute' ? chartIdx.indexOf(currentHourIndex(hourly.time)) : -1
+  const midnightIdx = -1   // single-day view, no midnight separator needed
+
+  renderUvChart(labels, isoTimes,
+    chartIdx.map(i => Math.round((hourly.uv_index[i] ?? 0) * 10) / 10),
+    nowIdx, midnightIdx)
+
+  renderRainChart(labels, isoTimes,
+    chartIdx.map(i => hourly.precipitation_probability[i] ?? 0),
+    chartIdx.map(i => Math.round((hourly.precipitation?.[i] ?? 0) * 10) / 10),
+    nowIdx, midnightIdx)
+
+  renderWindChart(labels, isoTimes,
+    chartIdx.map(i => Math.round(hourly.wind_speed_10m?.[i] ?? 0)),
+    nowIdx, midnightIdx)
+}
+
+// ── Tab switching ─────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeTab = btn.dataset.day
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn))
+    if (cachedData) renderForTab(activeTab, cachedData.hourly)
+  })
+})
+
 // ── Main update ───────────────────────────────────────────
 async function update() {
   $('app').classList.add('loading')
-
   try {
-    const data = await fetchWeatherData()
-    const { hourly } = data
-    const times    = hourly.time
-    const now      = new Date()
-    const mode     = getDayMode(now)
-
-    // Which date and hour window to use for the HEUTE box
-    const targetDate = mode === 'morgen' ? dateStr(tomorrow()) : dateStr(now)
-    const [startH, endH] = mode === 'wochenende' ? [6, 20] : [8, 14]
-    const windowIdx = getWindowIndices(times, targetDate, startH, endH)
-
-    // HEUTE box
-    $('heute-label').textContent = boxLabel(mode, hourly, windowIdx)
-    renderActionItems(hourly, windowIdx, mode)
-    renderHeuteSummary(hourly, windowIdx)
+    cachedData = await fetchWeatherData()
+    const { hourly } = cachedData
 
     // Alert banner (always scans next 6h from now)
-    const stormMsg = thunderstormAlert(times, hourly.weather_code, hourly.cape)
+    const stormMsg = thunderstormAlert(hourly.time, hourly.weather_code, hourly.cape)
     const banner   = $('alert-banner')
-    if (stormMsg) {
-      $('alert-text').textContent = stormMsg
-      banner.classList.remove('hidden')
-    } else {
-      banner.classList.add('hidden')
-    }
+    if (stormMsg) { $('alert-text').textContent = stormMsg; banner.classList.remove('hidden') }
+    else banner.classList.add('hidden')
 
-    // 48-hour chart data (today + tomorrow)
-    const chartIdx = get48hIndices(times)
-    const labels   = chartIdx.map(i => {
-      const d = new Date(times[i])
-      return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-    })
-    const isoTimes  = chartIdx.map(i => times[i])
-    const nowIdx    = chartIdx.indexOf(currentHourIndex(times))
-    // midnight index: first entry that starts the second day
-    const tomorrowS = dateStr(tomorrow())
-    const midnightIdx = chartIdx.findIndex(i => times[i].startsWith(tomorrowS))
+    renderForTab(activeTab, hourly)
 
-    renderUvChart(
-      labels, isoTimes,
-      chartIdx.map(i => Math.round((hourly.uv_index[i] ?? 0) * 10) / 10),
-      nowIdx, midnightIdx,
-    )
-
-    renderRainChart(
-      labels, isoTimes,
-      chartIdx.map(i => hourly.precipitation_probability[i] ?? 0),
-      chartIdx.map(i => Math.round((hourly.precipitation?.[i] ?? 0) * 10) / 10),
-      nowIdx, midnightIdx,
-    )
-
-    renderWindChart(
-      labels, isoTimes,
-      chartIdx.map(i => Math.round(hourly.wind_speed_10m?.[i] ?? 0)),
-      nowIdx, midnightIdx,
-    )
-
-    $('last-updated').textContent = `Stand: ${now.toLocaleTimeString('de-DE', {
+    $('last-updated').textContent = `Stand: ${new Date().toLocaleTimeString('de-DE', {
       hour: '2-digit', minute: '2-digit',
     })}`
-
   } catch (err) {
     console.error('Fetch failed:', err)
   } finally {
     $('app').classList.remove('loading')
   }
 }
+
+// ── Init ──────────────────────────────────────────────────
+activeTab = defaultTab()
+document.querySelectorAll('.tab').forEach(b =>
+  b.classList.toggle('active', b.dataset.day === activeTab)
+)
 
 $('refresh-btn').addEventListener('click', update)
 setInterval(update, 30 * 60 * 1000)

@@ -8,25 +8,28 @@ let windChart = null
 const MONO   = "'IBM Plex Mono', monospace"
 const TICK_C = '#9c9488'
 
-// X-axis: show 06:00, 12:00, 18:00 for both days + 00:00 separator
+// X-axis: show 06, 12, 18, 00 only
 const KEY_HOURS = new Set(['06:00', '12:00', '18:00', '00:00'])
 
-const xAxis = (labels, isoTimes) => ({
-  grid:   { display: false },
-  border: { display: false },
-  ticks: {
-    color:       TICK_C,
-    font:        { family: MONO, size: 10 },
-    maxRotation: 0,
-    autoSkip:    false,
-    callback(_, i) {
-      if (i >= isoTimes.length) return null
-      const h = new Date(isoTimes[i]).getHours()
-      const hStr = String(h).padStart(2, '0') + ':00'
-      return KEY_HOURS.has(hStr) ? hStr : null
+function xAxis(labels, isoTimes) {
+  return {
+    grid:   { display: false },
+    border: { display: false },
+    ticks: {
+      color:       TICK_C,
+      font:        { family: MONO, size: 10 },
+      maxRotation: 0,
+      autoSkip:    false,
+      callback(_, i) {
+        if (!isoTimes[i]) return null
+        const h = new Date(isoTimes[i]).getHours()
+        return KEY_HOURS.has(String(h).padStart(2,'0') + ':00')
+          ? String(h).padStart(2,'0') + ':00'
+          : null
+      },
     },
-  },
-})
+  }
+}
 
 const TOOLTIP = {
   enabled:         true,
@@ -41,60 +44,19 @@ const TOOLTIP = {
   cornerRadius:    6,
 }
 
-// ── Midnight day-separator plugin ────────────────────────
-// Draws a solid vertical line at the midnight boundary between
-// day 1 and day 2, with "heute" and "morgen" flanking labels.
-function makeMidnightPlugin(midnightIdx) {
-  return {
-    id: 'midnight',
-    afterDatasetsDraw(chart) {
-      if (midnightIdx < 0) return
-      const { ctx, chartArea: { top, bottom }, scales: { x } } = chart
-      const xPx = x.getPixelForValue(midnightIdx)
-      ctx.save()
-
-      // Solid separator line
-      ctx.strokeStyle = '#c8c4bc'
-      ctx.lineWidth   = 1
-      ctx.setLineDash([])
-      ctx.beginPath()
-      ctx.moveTo(xPx, top)
-      ctx.lineTo(xPx, bottom)
-      ctx.stroke()
-
-      ctx.font         = `400 9px ${MONO}`
-      ctx.fillStyle    = '#b0aba3'
-      ctx.textBaseline = 'top'
-      const y = top + 3
-
-      // "heute" left-anchored before the line
-      ctx.textAlign = 'right'
-      ctx.fillText('heute', xPx - 5, y)
-
-      // "morgen" right-anchored after the line
-      ctx.textAlign = 'left'
-      ctx.fillText('morgen', xPx + 5, y)
-
-      ctx.restore()
-    },
-  }
-}
-
-// ── Threshold line + Y-label plugin ─────────────────────
+// ── Threshold line plugin ────────────────────────────────
 // lines: [{ value, color, label, tickLabel? }]
-function makeThresholdPlugin(lines) {
+function makeThresholdPlugin(lines, yScaleKey = 'y') {
   return {
-    id: 'thresholds_' + Math.random().toString(36).slice(2),
+    id: 'thresh_' + yScaleKey + '_' + Math.random().toString(36).slice(2),
     afterDatasetsDraw(chart) {
       const { ctx, chartArea: { left, right, top, bottom }, scales } = chart
-      const y = scales.y ?? scales.yLeft
+      const y = scales[yScaleKey]
       if (!y) return
-
       ctx.save()
       for (const line of lines) {
         const yPx = y.getPixelForValue(line.value)
         if (yPx < top || yPx > bottom) continue
-
         ctx.strokeStyle = line.color ?? '#94a3b8'
         ctx.lineWidth   = 1
         ctx.setLineDash([4, 4])
@@ -102,7 +64,6 @@ function makeThresholdPlugin(lines) {
         ctx.moveTo(left, yPx)
         ctx.lineTo(right, yPx)
         ctx.stroke()
-
         ctx.setLineDash([])
         ctx.fillStyle    = line.color ?? '#94a3b8'
         ctx.font         = `400 9px ${MONO}`
@@ -116,7 +77,7 @@ function makeThresholdPlugin(lines) {
 }
 
 // Y-axis with ticks only at threshold values
-function thresholdYAxis(thresholds, opts = {}) {
+function thresholdYAxis(thresholds, extra = {}) {
   const values = thresholds.map(t => t.value)
   return {
     grid:   { display: false },
@@ -130,11 +91,11 @@ function thresholdYAxis(thresholds, opts = {}) {
         return hit ? (hit.tickLabel ?? String(hit.value)) : null
       },
     },
-    ...opts,
+    ...extra,
   }
 }
 
-// ── "Jetzt" vertical marker ──────────────────────────────
+// ── "Jetzt" marker ───────────────────────────────────────
 function makeJetztPlugin(nowIdx) {
   return {
     id: 'jetzt',
@@ -156,6 +117,35 @@ function makeJetztPlugin(nowIdx) {
       ctx.textAlign    = 'center'
       ctx.textBaseline = 'top'
       ctx.fillText('Jetzt', xPx, top + 3)
+      ctx.restore()
+    },
+  }
+}
+
+// ── Midnight separator ───────────────────────────────────
+function makeMidnightPlugin(midnightIdx) {
+  return {
+    id: 'midnight',
+    afterDatasetsDraw(chart) {
+      if (midnightIdx < 0) return
+      const { ctx, chartArea: { top, bottom }, scales: { x } } = chart
+      const xPx = x.getPixelForValue(midnightIdx)
+      ctx.save()
+      ctx.strokeStyle = '#c8c4bc'
+      ctx.lineWidth   = 1
+      ctx.setLineDash([])
+      ctx.beginPath()
+      ctx.moveTo(xPx, top)
+      ctx.lineTo(xPx, bottom)
+      ctx.stroke()
+      ctx.font         = `400 9px ${MONO}`
+      ctx.fillStyle    = '#b0aba3'
+      ctx.textBaseline = 'top'
+      const y = top + 3
+      ctx.textAlign = 'right'
+      ctx.fillText('heute', xPx - 5, y)
+      ctx.textAlign = 'left'
+      ctx.fillText('morgen', xPx + 5, y)
       ctx.restore()
     },
   }
@@ -187,23 +177,29 @@ const uvZonesPlugin = {
   },
 }
 
+// ── UV area gradient by height ───────────────────────────
+// Maps Y-axis domain [0–12] to gradient stops proportionally.
+// The gradient encodes risk level visually even without the zones.
 const uvGradientPlugin = {
   id: 'uvGradient',
   beforeDatasetsDraw(chart) {
-    const { ctx, chartArea: { top, bottom } } = chart
+    const { ctx, chartArea: { top, bottom }, scales: { y } } = chart
     const g = ctx.createLinearGradient(0, top, 0, bottom)
-    g.addColorStop(0,    'rgba(107,42,150,0.38)')
-    g.addColorStop(0.25, 'rgba(155,33,19,0.28)')
-    g.addColorStop(0.5,  'rgba(179,66,20,0.18)')
-    g.addColorStop(0.75, 'rgba(156,109,14,0.10)')
-    g.addColorStop(1,    'rgba(61,122,78,0.03)')
+    // Map UV values to proportional stops (yMax = 12)
+    // bottom of chart = UV 0, top = UV 12
+    const stop = v => 1 - (v / 12)   // 0 is bottom (stop 1.0), 12 is top (stop 0.0)
+    g.addColorStop(Math.max(0, stop(11)), 'rgba(248,113,113, 0.70)')  // red  8+
+    g.addColorStop(stop(8),              'rgba(251,146, 60, 0.55)')  // orange 6–8
+    g.addColorStop(stop(6),              'rgba(253,224, 71, 0.40)')  // yellow 3–6
+    g.addColorStop(stop(3),              'rgba(134,239,172, 0.28)')  // green 0–3
+    g.addColorStop(1,                    'rgba(134,239,172, 0.04)')  // near zero
     chart.data.datasets[0].backgroundColor = g
   },
 }
 
 // ── UV chart ─────────────────────────────────────────────
 const UV_THRESHOLDS = [
-  { value: 3, color: '#86efac', label: '🧴 Eincremen', tickLabel: '3' },
+  { value: 3, color: '#eab308', label: '🧴 Eincremen', tickLabel: '3' },
   { value: 6, color: '#fb923c', label: '🌂 Schatten',  tickLabel: '6' },
   { value: 8, color: '#f87171', label: '⚠️ Drinnen',   tickLabel: '8' },
 ]
@@ -220,8 +216,8 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       datasets: [{
         data,
         fill:             true,
-        backgroundColor:  'transparent',
-        borderColor:      'rgba(156,109,14,0.75)',
+        backgroundColor:  'transparent',       // overwritten by uvGradientPlugin each frame
+        borderColor:      '#fb923c',            // solid orange line on top
         borderWidth:      2,
         tension:          0.4,
         pointRadius:      0,
@@ -248,7 +244,7 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
   })
 }
 
-// ── Rain chart ───────────────────────────────────────────
+// ── Rain chart — bars (mm) + dashed line (%) ─────────────
 export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midnightIdx) {
   const canvas = document.getElementById('rain-chart')
   if (!canvas) return
@@ -266,7 +262,7 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
       const lastProb = probData.reduceRight((a, v, i) => a === -1 && v != null ? i : a, -1)
       if (lastProb >= 0 && scales.yRight) {
         const yPx = scales.yRight.getPixelForValue(probData[lastProb])
-        ctx.fillStyle = 'rgba(90,118,170,0.7)'
+        ctx.fillStyle = 'rgba(59,130,246,0.8)'
         ctx.textAlign = 'left'
         ctx.fillText('%', right + 4, yPx)
       }
@@ -274,7 +270,7 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
       const lastMm = mmData.reduceRight((a, v, i) => a === -1 && v != null ? i : a, -1)
       if (lastMm >= 0 && scales.yLeft) {
         const yPx = scales.yLeft.getPixelForValue(mmData[lastMm])
-        ctx.fillStyle = 'rgba(96,165,250,0.8)'
+        ctx.fillStyle = 'rgba(96,165,250,0.9)'
         ctx.textAlign = 'left'
         ctx.fillText('mm', right + 4, yPx + 12)
       }
@@ -317,7 +313,7 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
           type:            'bar',
           label:           'mm',
           data:            mmData,
-          backgroundColor: 'rgba(96,165,250,0.50)',
+          backgroundColor: 'rgba(96,165,250,0.45)',
           borderColor:     'transparent',
           borderRadius:    3,
           borderSkipped:   false,
@@ -328,7 +324,7 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
           type:             'line',
           label:            '%',
           data:             probData,
-          borderColor:      'rgba(90,118,170,0.70)',
+          borderColor:      '#3b82f6',
           borderDash:       [4, 3],
           borderWidth:      1.5,
           fill:             false,
@@ -368,7 +364,12 @@ export function renderRainChart(labels, isoTimes, probData, mmData, nowIdx, midn
         },
       },
     },
-    plugins: [rainLabelPlugin, rainThreshPlugin, makeJetztPlugin(nowIdx), makeMidnightPlugin(midnightIdx)],
+    plugins: [
+      rainLabelPlugin,
+      rainThreshPlugin,
+      makeJetztPlugin(nowIdx),
+      makeMidnightPlugin(midnightIdx),
+    ],
   })
 }
 
