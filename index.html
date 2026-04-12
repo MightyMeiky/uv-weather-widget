@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f7f5f0" />
+  <meta name="theme-color" content="#f7f4ee" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <title>UV & Wetter · Landsberied</title>
   <link rel="stylesheet" href="/main.css" />
 </head>
 <body>
   <div id="app">
+
     <header>
       <div class="location">
         <span class="location-icon">📍</span>
@@ -21,57 +22,38 @@
     </header>
 
     <main>
-      <!-- UV Section -->
-      <section class="card uv-card" id="uv-card">
-        <div class="card-label">UV-Index</div>
-        <div class="uv-display">
-          <div class="uv-value" id="uv-value">–</div>
-          <div class="uv-level" id="uv-level">Laden…</div>
-        </div>
-        <div class="uv-advice" id="uv-advice"></div>
-        <div class="uv-peak" id="uv-peak"></div>
-      </section>
+      <div class="layout-grid">
 
-      <!-- UV Chart -->
-      <section class="card chart-card">
-        <div class="card-label">Tagesverlauf UV</div>
-        <div class="chart-wrapper">
-          <canvas id="uv-chart"></canvas>
-        </div>
-      </section>
+        <!-- ── Primary column: UV card + combined chart ── -->
+        <div class="col-primary">
 
-      <!-- Weather Section -->
-      <section class="card weather-card">
-        <div class="card-label">Aktuelles Wetter</div>
-        <div class="weather-grid">
-          <div class="weather-item">
-            <span class="weather-icon" id="weather-icon">–</span>
-            <span class="weather-label">Wetter</span>
-          </div>
-          <div class="weather-item">
-            <span class="weather-value" id="temp">–</span>
-            <span class="weather-label">Temperatur</span>
-          </div>
-          <div class="weather-item">
-            <span class="weather-value" id="precip-prob">–</span>
-            <span class="weather-label">Regenwahrsch.</span>
-          </div>
-          <div class="weather-item">
-            <span class="weather-value" id="wind">–</span>
-            <span class="weather-label">Wind</span>
-          </div>
-        </div>
-      </section>
+          <section class="card uv-card" id="uv-card">
+            <div class="card-label">UV-Index</div>
+            <div class="uv-display">
+              <div class="uv-value" id="uv-value">–</div>
+              <div class="uv-level" id="uv-level">Laden…</div>
+            </div>
+            <div class="uv-advice" id="uv-advice"></div>
+            <div class="uv-peak" id="uv-peak"></div>
+          </section>
 
-      <!-- Rain/Storm Chart -->
-      <section class="card chart-card">
-        <div class="card-label">Regen & Gewitter heute</div>
-        <div class="chart-wrapper">
-          <canvas id="rain-chart"></canvas>
-        </div>
-      </section>
+          <section class="card chart-card">
+            <div class="card-label">Tagesverlauf</div>
+            <div class="chart-wrapper">
+              <canvas id="day-chart"></canvas>
+            </div>
+          </section>
 
-      <!-- Alert Banner -->
+        </div>
+
+        <!-- ── Secondary column: action cards ── -->
+        <div class="col-secondary">
+          <section id="action-cards"></section>
+        </div>
+
+      </div>
+
+      <!-- Full-width alert banner, below the grid -->
       <div class="alert-banner hidden" id="alert-banner">
         <span class="alert-icon">⚠️</span>
         <span class="alert-text" id="alert-text"></span>
@@ -82,8 +64,8 @@
       <button class="refresh-btn" id="refresh-btn">↻ Aktualisieren</button>
       <span class="data-source">Daten: Open-Meteo</span>
     </footer>
-  </div>
 
+  </div>
   <script type="module" src="/main.js"></script>
 </body>
 </html>
