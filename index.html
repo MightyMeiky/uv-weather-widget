@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <title>UV & Wetter · Landsberied</title>
+  <link rel="stylesheet" href="/main.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="location">
+        <span class="location-icon">📍</span>
+        <span class="location-name">Landsberied</span>
+      </div>
+      <div class="last-updated" id="last-updated">–</div>
+    </header>
+
+    <main>
+      <!-- UV Section -->
+      <section class="card uv-card" id="uv-card">
+        <div class="card-label">UV-Index</div>
+        <div class="uv-display">
+          <div class="uv-value" id="uv-value">–</div>
+          <div class="uv-level" id="uv-level">Laden…</div>
+        </div>
+        <div class="uv-advice" id="uv-advice"></div>
+        <div class="uv-peak" id="uv-peak"></div>
+      </section>
+
+      <!-- UV Chart -->
+      <section class="card chart-card">
+        <div class="card-label">Tagesverlauf UV</div>
+        <div class="chart-wrapper">
+          <canvas id="uv-chart"></canvas>
+        </div>
+      </section>
+
+      <!-- Weather Section -->
+      <section class="card weather-card">
+        <div class="card-label">Aktuelles Wetter</div>
+        <div class="weather-grid">
+          <div class="weather-item">
+            <span class="weather-icon" id="weather-icon">–</span>
+            <span class="weather-label">Wetter</span>
+          </div>
+          <div class="weather-item">
+            <span class="weather-value" id="temp">–</span>
+            <span class="weather-label">Temperatur</span>
+          </div>
+          <div class="weather-item">
+            <span class="weather-value" id="precip-prob">–</span>
+            <span class="weather-label">Regenwahrsch.</span>
+          </div>
+          <div class="weather-item">
+            <span class="weather-value" id="wind">–</span>
+            <span class="weather-label">Wind</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Rain/Storm Chart -->
+      <section class="card chart-card">
+        <div class="card-label">Regen & Gewitter heute</div>
+        <div class="chart-wrapper">
+          <canvas id="rain-chart"></canvas>
+        </div>
+      </section>
+
+      <!-- Alert Banner -->
+      <div class="alert-banner hidden" id="alert-banner">
+        <span class="alert-icon">⚠️</span>
+        <span class="alert-text" id="alert-text"></span>
+      </div>
+    </main>
+
+    <footer>
+      <button class="refresh-btn" id="refresh-btn">↻ Aktualisieren</button>
+      <span class="data-source">Daten: Open-Meteo</span>
+    </footer>
+  </div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
