@@ -341,34 +341,6 @@ main {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── HEUTE summary grid ─────────────────────────────────── */
-.heute-summary {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 16px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--rule);
-}
-
-.heute-summary-cell {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.heute-summary-icon {
-  font-size: 1rem;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.heute-summary-value {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.78rem;
-  color: var(--ink-3);
-  white-space: nowrap;
-}
 
 /* ── Chart grid ─────────────────────────────────────────── */
 .charts-grid {
@@ -616,7 +588,4 @@ footer {
     height: 200px;
   }
 
-  .heute-summary {
-    grid-template-columns: repeat(4, 1fr);
-  }
 }

@@ -145,25 +145,6 @@ function renderDecisionCard(hourly, windowIdx, tab) {
   if (windTriggered || stormTime)      accent = '#f87171' // danger → red
   $('heute-box').style.setProperty('--dc-accent', accent)
 
-  // ── Line 4 — Max values grid ─────────────────────────────
-  $('heute-summary').innerHTML = `
-    <div class="heute-summary-cell">
-      <span class="heute-summary-icon">🌡️</span>
-      <span class="heute-summary-value">${minT}°–${maxT}°C</span>
-    </div>
-    <div class="heute-summary-cell">
-      <span class="heute-summary-icon">☀️</span>
-      <span class="heute-summary-value">UV ${Math.round(maxUv * 10) / 10}</span>
-    </div>
-    <div class="heute-summary-cell">
-      <span class="heute-summary-icon">🌧️</span>
-      <span class="heute-summary-value">${Math.round(maxRain * 10) / 10}mm · ${maxProb}%</span>
-    </div>
-    <div class="heute-summary-cell">
-      <span class="heute-summary-icon">💨</span>
-      <span class="heute-summary-value">${Math.round(maxWind)} km/h</span>
-    </div>
-  `
 }
 
 // ── Render all charts for a given tab/day ─────────────────
