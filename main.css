@@ -80,9 +80,9 @@ body::after {
 
 /* ── App shell ──────────────────────────────────────────── */
 #app {
-  max-width: 600px;
+  max-width: 520px;
   margin: 0 auto;
-  padding: 0 1.25rem 2.5rem;
+  padding: 0 16px 2.5rem;
   display: flex;
   flex-direction: column;
   gap: var(--gap);
@@ -224,14 +224,16 @@ main {
   gap: var(--gap);
 }
 
-/* ── HEUTE box ──────────────────────────────────────────── */
-.heute-box {
+/* ── Decision Card ──────────────────────────────────────── */
+.decision-card {
+  --dc-accent: #3d7a4e;
   background: var(--card-bg);
   border: 1.5px solid var(--card-border);
+  border-left: 4px solid var(--dc-accent);
   border-radius: 12px;
-  padding: 16px 20px 18px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  transition: background 0.3s, border-color 0.3s;
+  padding: 28px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.09);
+  transition: background 0.3s, border-color 0.3s, border-left-color 0.4s ease;
 }
 
 /* ── Tab bar ────────────────────────────────────────────── */
@@ -242,7 +244,8 @@ main {
   background: var(--rule);
   border-radius: 8px;
   width: fit-content;
-  margin-bottom: -4px;
+  margin-top: 16px;
+  margin-bottom: 16px;
   transition: background 0.3s;
 }
 
@@ -266,64 +269,75 @@ main {
   color: var(--tab-active-text);
 }
 
-/* ── HEUTE label + content ──────────────────────────────── */
-.heute-label {
+/* ── Decision Card internals ────────────────────────────── */
+.dc-label {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.58rem;
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--rule);
 }
 
-/* ── Action items ───────────────────────────────────────── */
-.action-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  line-height: 1.8;
-  cursor: default;
-  transition: background 150ms ease;
+/* Line 1 — Temperature */
+.dc-temp {
+  font-family: 'Geist', sans-serif;
+  font-weight: 800;
+  font-size: 1.4rem;
+  color: var(--ink);
+  line-height: 1.15;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+
+/* Line 2 — Action items */
+.dc-actions {
+  margin-bottom: 8px;
+}
+
+.dc-action-item {
+  font-family: 'Geist', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--ink);
+  line-height: 1.65;
   opacity: 0;
   animation: actionIn 0.3s ease forwards;
 }
 
-.action-item:hover { background: var(--rule); }
-
-.action-item--calm .action-item__text { color: var(--ink-2); }
-
-.action-item__icon {
-  font-size: 1rem;
-  flex-shrink: 0;
-  width: 1.5rem;
-  text-align: center;
+.dc-action-value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--ink-2);
 }
 
-.action-item__text {
+.dc-calm {
   font-family: 'Geist', sans-serif;
   font-weight: 600;
-  font-size: 1.0rem;
+  font-size: 1.1rem;
   color: var(--ink);
-  flex: 1;
-  min-width: 0;
+  line-height: 1.5;
 }
 
-.action-item__value {
+/* Line 3 — Passive values */
+.dc-passive {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.72rem;
-  color: var(--ink-2);
-  white-space: nowrap;
-  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.dc-passive:empty {
+  display: none;
 }
 
 @keyframes actionIn {
-  from { opacity: 0; transform: translateY(5px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -351,20 +365,9 @@ main {
 
 .heute-summary-value {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--ink-3);
   white-space: nowrap;
-}
-
-/* ── Weekend greeting ───────────────────────────────────── */
-.heute-weekend-greeting {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.65rem;
-  color: var(--ink-3);
-  letter-spacing: 0.04em;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--rule);
 }
 
 /* ── Chart grid ─────────────────────────────────────────── */
@@ -374,12 +377,32 @@ main {
   gap: var(--gap);
 }
 
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 4px;
+  color: var(--ink-3);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
 .chart-panel {
   background: var(--card-bg);
   border: 1.5px solid var(--card-border);
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
   transition: background 0.3s, border-color 0.3s;
 }
 
@@ -579,7 +602,7 @@ footer {
 @media (min-width: 768px) {
 
   #app {
-    max-width: 960px;
+    max-width: 900px;
     padding: 0 2rem 3rem;
   }
 
@@ -590,7 +613,7 @@ footer {
   }
 
   .chart-wrapper {
-    height: 180px;
+    height: 200px;
   }
 
   .heute-summary {

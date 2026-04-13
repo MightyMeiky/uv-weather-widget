@@ -78,16 +78,74 @@ function boxLabel(tab) {
   return isWeekend(d) ? dayName : `${dayName} · 8–14 Uhr`
 }
 
-function renderHeuteSummary(hourly, windowIdx) {
-  const maxUv   = Math.max(...windowIdx.map(i => hourly.uv_index[i]        ?? 0), 0)
-  const maxRain = Math.max(...windowIdx.map(i => hourly.precipitation?.[i]  ?? 0), 0)
+function renderDecisionCard(hourly, windowIdx, tab) {
+  // ── Metrics ──────────────────────────────────────────────
+  const maxUv   = Math.max(...windowIdx.map(i => hourly.uv_index[i]                   ?? 0), 0)
   const maxProb = Math.max(...windowIdx.map(i => hourly.precipitation_probability?.[i] ?? 0), 0)
-  const maxWind = Math.max(...windowIdx.map(i => hourly.wind_speed_10m?.[i] ?? 0), 0)
+  const maxRain = Math.max(...windowIdx.map(i => hourly.precipitation?.[i]             ?? 0), 0)
+  const maxWind = Math.max(...windowIdx.map(i => hourly.wind_speed_10m?.[i]            ?? 0), 0)
   const temps   = windowIdx.map(i => hourly.temperature_2m?.[i]).filter(v => v != null)
+  const minT    = temps.length ? Math.round(Math.min(...temps)) : '–'
+  const maxT    = temps.length ? Math.round(Math.max(...temps)) : '–'
 
-  const minT = temps.length ? Math.round(Math.min(...temps)) : '–'
-  const maxT = temps.length ? Math.round(Math.max(...temps)) : '–'
+  // ── Line 1 — Temperature ─────────────────────────────────
+  $('dc-temp').textContent = `🌡️ ${minT}°–${maxT}°C`
 
+  // ── Triggers ─────────────────────────────────────────────
+  const uvTriggered   = maxUv >= 3
+  const rainTriggered = maxProb > 40
+  const windTriggered = Math.round(maxWind) >= 45
+
+  const now = new Date()
+  let stormTime = null
+  for (const i of windowIdx) {
+    const t = new Date(hourly.time[i])
+    if (tab === 'heute' && t <= now) continue
+    if ([95, 96, 99].includes(hourly.weather_code[i]) || (hourly.cape?.[i] ?? 0) > 500) {
+      stormTime = t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+      break
+    }
+  }
+
+  // ── Line 2 — Action items ─────────────────────────────────
+  const actions = []
+  if (uvTriggered) {
+    actions.push({ icon: '🧴', text: 'Sonnencreme', value: `UV ${Math.round(maxUv * 10) / 10}` })
+  }
+  if (rainTriggered) {
+    const wetIdx = windowIdx.filter(i => (hourly.precipitation_probability?.[i] ?? 0) > 40)
+    const fmt    = i => new Date(hourly.time[i]).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+    actions.push({ icon: '🌧️', text: 'Regenkleidung', value: `${maxProb}% ab ${fmt(wetIdx[0])}` })
+  }
+  if (windTriggered) {
+    actions.push({ icon: '💨', text: 'Sturmwarnung', value: `${Math.round(maxWind)} km/h` })
+  }
+  if (stormTime) {
+    actions.push({ icon: '⚠️', text: 'Gewitter möglich', value: `um ${stormTime}` })
+  }
+
+  $('dc-actions').innerHTML = actions.length
+    ? actions.map((a, idx) => `
+        <div class="dc-action-item" style="animation-delay:${idx * 60}ms">
+          ${a.icon} ${a.text} · <span class="dc-action-value">${a.value}</span>
+        </div>`).join('')
+    : `<div class="dc-calm">🐗 Alles gut heute</div>`
+
+  // ── Line 3 — Passive values (metrics that didn't trigger) ─
+  const passive = []
+  if (!uvTriggered)   passive.push(`☀️ UV ${Math.round(maxUv * 10) / 10}`)
+  if (!rainTriggered) passive.push(`🌧️ ${maxProb}%`)
+  if (!windTriggered) passive.push(`💨 ${Math.round(maxWind)} km/h`)
+  $('dc-passive').textContent = passive.join(' · ')
+
+  // ── Accent border — escalates with highest warning ────────
+  let accent = '#3d7a4e'                              // calm  → green
+  if (uvTriggered)                     accent = '#eab308' // UV    → amber
+  if (rainTriggered)                   accent = '#3b82f6' // rain  → blue
+  if (windTriggered || stormTime)      accent = '#f87171' // danger → red
+  $('heute-box').style.setProperty('--dc-accent', accent)
+
+  // ── Line 4 — Max values grid ─────────────────────────────
   $('heute-summary').innerHTML = `
     <div class="heute-summary-cell">
       <span class="heute-summary-icon">🌡️</span>
@@ -108,66 +166,6 @@ function renderHeuteSummary(hourly, windowIdx) {
   `
 }
 
-function renderActionItems(hourly, windowIdx, tab) {
-  const now   = new Date()
-  const items = []
-
-  for (const i of windowIdx) {
-    if ((hourly.uv_index[i] ?? 0) >= 3) {
-      const t = new Date(hourly.time[i])
-        .toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-      items.push({ icon: '🧴', text: 'Sonnencreme', value: `UV ${Math.round((hourly.uv_index[i] ?? 0) * 10) / 10}` })
-      break
-    }
-  }
-
-  const wetIdx = windowIdx.filter(i => (hourly.precipitation_probability[i] ?? 0) > 40)
-  if (wetIdx.length) {
-    const fmt  = i => new Date(hourly.time[i])
-      .toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-    const maxP = Math.max(...wetIdx.map(i => hourly.precipitation_probability[i]))
-    items.push({ icon: '🌧️', text: 'Regenkleidung', value: `${maxP}% ab ${fmt(wetIdx[0])}` })
-  }
-
-  for (const i of windowIdx) {
-    const t = new Date(hourly.time[i])
-    if (tab === 'heute' && t <= now) continue
-    if ([95, 96, 99].includes(hourly.weather_code[i]) || (hourly.cape?.[i] ?? 0) > 500) {
-      items.push({
-        icon:  '⚠️',
-        text:  'Gewitter möglich',
-        value: `um ${t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`,
-      })
-      break
-    }
-  }
-
-  if (!items.length) {
-    items.push({ icon: '✅', text: 'Entspannter Tag', value: 'kein Schutz nötig', calm: true })
-  }
-
-  $('action-items').innerHTML = items
-    .map((item, idx) => `
-      <div class="action-item${item.calm ? ' action-item--calm' : ''}"
-           style="animation-delay:${idx * 80}ms">
-        <span class="action-item__icon">${item.icon}</span>
-        <span class="action-item__text">${item.text}</span>
-        ${item.value ? `<span class="action-item__value">${item.value}</span>` : ''}
-      </div>`)
-    .join('')
-
-  // Weekend greeting (Heute tab only on weekend)
-  const existing = $('heute-weekend-greeting')
-  if (existing) existing.remove()
-  if (isWeekend(new Date()) && tab === 'heute') {
-    const div = document.createElement('div')
-    div.id = 'heute-weekend-greeting'
-    div.className = 'heute-weekend-greeting'
-    div.textContent = '🐗 Schönes Wochenende!'
-    $('heute-box').appendChild(div)
-  }
-}
-
 // ── Render all charts for a given tab/day ─────────────────
 function renderForTab(tab, hourly) {
   const now       = new Date()
@@ -181,10 +179,9 @@ function renderForTab(tab, hourly) {
   const [startH, endH] = (isWeekend(now) && tab === 'heute') ? [6, 20] : [8, 14]
   const windowIdx = getWindowIndices(hourly.time, targetDate, startH, endH)
 
-  // Box
+  // Decision Card
   $('heute-label').textContent = boxLabel(tab)
-  renderActionItems(hourly, windowIdx, tab)
-  renderHeuteSummary(hourly, windowIdx)
+  renderDecisionCard(hourly, windowIdx, tab)
 
   // Charts: full 24h of the selected day
   const chartIdx   = get24hIndices(hourly.time, targetDate)
