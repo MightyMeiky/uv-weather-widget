@@ -8,10 +8,12 @@ let windChart = null
 const MONO   = "'IBM Plex Mono', monospace"
 const TICK_C = '#9c9488'
 
-// X-axis: show 06, 12, 18, 00 only
-const KEY_HOURS = new Set(['06:00', '12:00', '18:00', '00:00'])
+// X-axis tick sets per mode
+const KEY_HOURS_DAY  = new Set(['06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00'])
+const KEY_HOURS_FULL = new Set(['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00'])
 
-function xAxis(labels, isoTimes) {
+function xAxis(labels, isoTimes, fullDay = false) {
+  const KEY_HOURS = fullDay ? KEY_HOURS_FULL : KEY_HOURS_DAY
   return {
     grid:   { display: false },
     border: { display: false },
@@ -23,10 +25,43 @@ function xAxis(labels, isoTimes) {
       callback(_, i) {
         if (!isoTimes[i]) return null
         const h = new Date(isoTimes[i]).getHours()
-        return KEY_HOURS.has(String(h).padStart(2,'0') + ':00')
-          ? String(h).padStart(2,'0') + ':00'
-          : null
+        const key = String(h).padStart(2,'0') + ':00'
+        return KEY_HOURS.has(key) ? key : null
       },
+    },
+  }
+}
+
+// ── Kindergarten time zone (08:00–14:00) ─────────────────
+// show:      render the zone at all (false on weekends)
+// showLabel: show '🌲 Waldzeit' label (true on UV chart only)
+function makeKindergartenPlugin(show, showLabel) {
+  return {
+    id: 'kindergarten',
+    beforeDatasetsDraw(chart) {
+      if (!show) return
+      const { ctx, chartArea: { top, bottom }, scales: { x } } = chart
+      const labels   = chart.data.labels
+      const startIdx = labels.indexOf('08:00')
+      const endIdx   = labels.indexOf('14:00')
+      if (startIdx < 0 || endIdx < 0) return
+
+      const xStart = x.getPixelForValue(startIdx)
+      const xEnd   = x.getPixelForValue(endIdx)
+      if (xEnd <= xStart) return
+
+      ctx.save()
+      ctx.fillStyle = 'rgba(200, 245, 66, 0.07)'
+      ctx.fillRect(xStart, top, xEnd - xStart, bottom - top)
+
+      if (showLabel) {
+        ctx.fillStyle    = 'rgba(100, 130, 50, 0.5)'
+        ctx.font         = `400 8px ${MONO}`
+        ctx.textAlign    = 'left'
+        ctx.textBaseline = 'top'
+        ctx.fillText('🌲 Waldzeit', xStart + 6, top + 6)
+      }
+      ctx.restore()
     },
   }
 }
@@ -360,7 +395,7 @@ const UV_THRESHOLDS = [
   { value: 8, color: '#f87171', label: '⚠️ Drinnen',   tickLabel: '8' },
 ]
 
-export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
+export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx, fullDay = false, showKindergarten = false) {
   const canvas = document.getElementById('uv-chart')
   if (!canvas) return
   if (uvChart) uvChart.destroy()
@@ -396,11 +431,12 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       animation: { duration: 600, easing: 'easeInOutQuart' },
       plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
-        x: xAxis(labels, isoTimes),
+        x: xAxis(labels, isoTimes, fullDay),
         y: { ...thresholdYAxis(UV_THRESHOLDS), min: 0, max: 12 },
       },
     },
     plugins: [
+      makeKindergartenPlugin(showKindergarten, true),
       uvZonesPlugin,
       uvGradientPlugin,
       makeThresholdPlugin(UV_THRESHOLDS),
@@ -416,42 +452,21 @@ export function renderUvChart(labels, isoTimes, data, nowIdx, midnightIdx) {
   attachCrosshair(canvas, uvChart, v => `UV ${v}`)
 }
 
-// ── Rain chart — precipitation probability area ───────────
-export function renderRainChart(labels, isoTimes, probData, nowIdx, midnightIdx) {
+// ── Rain chart — precipitation in mm, bar chart ──────────
+export function renderRainChart(labels, isoTimes, mmData, nowIdx, midnightIdx, fullDay = false, showKindergarten = false) {
   const canvas = document.getElementById('rain-chart')
   if (!canvas) return
   if (rainChart) rainChart.destroy()
 
-  const RAIN_COLOR = '#3b82f6'
+  const dataMax = Math.max(...mmData, 0)
+  const yMax    = Math.max(5, Math.ceil(dataMax + 1))
 
-  // Rain background zones (0–100%)
-  const rainZonesPlugin = {
-    id: 'rainZones',
-    beforeDatasetsDraw(chart) {
-      const { ctx, chartArea: { left, right }, scales: { y } } = chart
-      ctx.save()
-      const zones = [
-        { min: 40, max:  70, fill: 'rgba(96, 165, 250, 0.08)' },
-        { min: 70, max: 100, fill: 'rgba(96, 165, 250, 0.16)' },
-      ]
-      for (const z of zones) {
-        const yTop    = y.getPixelForValue(z.max)
-        const yBottom = y.getPixelForValue(z.min)
-        const h = yBottom - yTop
-        if (h <= 0) continue
-        ctx.fillStyle = z.fill
-        ctx.fillRect(left, yTop, right - left, h)
-      }
-      ctx.restore()
-    },
-  }
-
-  // 40% threshold line
+  // Threshold line at 1mm (light rain)
   const rainThreshPlugin = {
     id: 'rainThresh',
     afterDatasetsDraw(chart) {
       const { ctx, chartArea: { left, right, top, bottom }, scales: { y } } = chart
-      const yPx = y.getPixelForValue(40)
+      const yPx = y.getPixelForValue(1)
       if (yPx < top || yPx > bottom) return
       ctx.save()
       ctx.strokeStyle = '#93c5fd'
@@ -466,24 +481,24 @@ export function renderRainChart(labels, isoTimes, probData, nowIdx, midnightIdx)
       ctx.font         = `400 9px ${MONO}`
       ctx.textAlign    = 'right'
       ctx.textBaseline = 'bottom'
-      ctx.fillText('🌧️ Regenkleidung', right - 3, yPx - 2)
+      ctx.fillText('🌧️ Leichter Regen', right - 3, yPx - 2)
       ctx.restore()
     },
   }
 
   rainChart = new Chart(canvas.getContext('2d'), {
-    type: 'line',
+    type: 'bar',
     data: {
       labels,
       datasets: [{
-        data:             probData,
-        fill:             true,
-        backgroundColor:  'rgba(96, 165, 250, 0.18)',
-        borderColor:      RAIN_COLOR,
-        borderWidth:      2,
-        tension:          0.35,
-        pointRadius:      0,
-        pointHoverRadius: 0,
+        data:            mmData,
+        backgroundColor: 'rgba(96, 165, 250, 0.55)',
+        borderColor:     '#3b82f6',
+        borderWidth:     1,
+        borderRadius:    2,
+        borderSkipped:   'bottom',
+        barPercentage:   0.9,
+        categoryPercentage: 1.0,
       }],
     },
     options: {
@@ -492,21 +507,22 @@ export function renderRainChart(labels, isoTimes, probData, nowIdx, midnightIdx)
       animation: { duration: 600, easing: 'easeOutQuart' },
       plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
-        x: xAxis(labels, isoTimes),
+        x: xAxis(labels, isoTimes, fullDay),
         y: {
-          ...thresholdYAxis([{ value: 40, color: '#93c5fd', tickLabel: '40%' }]),
-          min: 0, max: 100,
+          ...thresholdYAxis([{ value: 1, color: '#93c5fd', tickLabel: '1mm' }]),
+          min: 0,
+          max: yMax,
         },
       },
     },
     plugins: [
-      rainZonesPlugin,
+      makeKindergartenPlugin(showKindergarten, false),
       rainThreshPlugin,
       makeJetztPlugin(nowIdx),
       makeMidnightPlugin(midnightIdx),
     ],
   })
-  attachCrosshair(canvas, rainChart, v => `${v}%`)
+  attachCrosshair(canvas, rainChart, v => `${v} mm`)
 }
 
 // ── Temperature chart ────────────────────────────────────
@@ -541,7 +557,7 @@ const tempZonesPlugin = {
   },
 }
 
-export function renderTempChart(labels, isoTimes, data, nowIdx, midnightIdx) {
+export function renderTempChart(labels, isoTimes, data, nowIdx, midnightIdx, fullDay = false, showKindergarten = false) {
   const canvas = document.getElementById('temp-chart')
   if (!canvas) return
   if (tempChart) tempChart.destroy()
@@ -567,7 +583,7 @@ export function renderTempChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       animation: { duration: 600, easing: 'easeInOutQuart' },
       plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
-        x: xAxis(labels, isoTimes),
+        x: xAxis(labels, isoTimes, fullDay),
         y: {
           ...thresholdYAxis(TEMP_THRESHOLDS),
           min: -10,
@@ -576,6 +592,7 @@ export function renderTempChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       },
     },
     plugins: [
+      makeKindergartenPlugin(showKindergarten, false),
       tempZonesPlugin,
       makeThresholdPlugin(TEMP_THRESHOLDS),
       makeJetztPlugin(
@@ -600,7 +617,7 @@ const BEAUFORT = [
   { value: 118, label: 'Orkan (Bft 12)' },
 ]
 
-export function renderWindChart(labels, isoTimes, data, nowIdx, midnightIdx) {
+export function renderWindChart(labels, isoTimes, data, nowIdx, midnightIdx, fullDay = false, showKindergarten = false) {
   const canvas = document.getElementById('wind-chart')
   if (!canvas) return
   if (windChart) windChart.destroy()
@@ -655,11 +672,12 @@ export function renderWindChart(labels, isoTimes, data, nowIdx, midnightIdx) {
       animation: { duration: 600, easing: 'easeInOutQuart' },
       plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
-        x: xAxis(labels, isoTimes),
+        x: xAxis(labels, isoTimes, fullDay),
         y: { ...thresholdYAxis(activeThresholds), min: 0, max: yMax },
       },
     },
     plugins: [
+      makeKindergartenPlugin(showKindergarten, false),
       windZonesPlugin,
       makeThresholdPlugin(activeThresholds),
       makeJetztPlugin(nowIdx),

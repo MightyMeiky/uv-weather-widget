@@ -11,8 +11,9 @@ const $ = id => document.getElementById(id)
 
 // ── Tab state ─────────────────────────────────────────────
 // Declared early so applyTheme can reference cachedData without TDZ error
-let activeTab = 'heute'
+let activeTab  = 'heute'
 let cachedData = null   // last successful API response
+let fullDay    = false  // time-window toggle: false = 06–20, true = 00–24
 
 // ── Dark mode ─────────────────────────────────────────────
 const themeToggle = $('theme-toggle')
@@ -35,6 +36,11 @@ applyTheme(document.documentElement.getAttribute('data-theme') === 'dark')
 // ── Day helpers ───────────────────────────────────────────
 function isWeekend(d = new Date()) {
   return d.getDay() === 0 || d.getDay() === 6
+}
+
+function isWeekdayForTab(tab) {
+  const d = tab === 'morgen' ? tomorrowDate() : new Date()
+  return !isWeekend(d)
 }
 
 function dateStr(d) {
@@ -164,30 +170,39 @@ function renderForTab(tab, hourly) {
   $('heute-label').textContent = boxLabel(tab)
   renderDecisionCard(hourly, windowIdx, tab)
 
-  // Charts: full 24h of the selected day
-  const chartIdx   = get24hIndices(hourly.time, targetDate)
-  const labels     = chartIdx.map(i =>
+  // Charts: 06–20 by default, or full 24h if fullDay toggle is active
+  const allChartIdx = get24hIndices(hourly.time, targetDate)
+  const chartIdx    = fullDay
+    ? allChartIdx
+    : allChartIdx.filter(i => {
+        const h = new Date(hourly.time[i]).getHours()
+        return h >= 6 && h <= 20
+      })
+
+  const labels      = chartIdx.map(i =>
     new Date(hourly.time[i]).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
   )
-  const isoTimes   = chartIdx.map(i => hourly.time[i])
-  const nowIdx     = tab === 'heute' ? chartIdx.indexOf(currentHourIndex(hourly.time)) : -1
+  const isoTimes    = chartIdx.map(i => hourly.time[i])
+  const nowIdx      = tab === 'heute' ? chartIdx.indexOf(currentHourIndex(hourly.time)) : -1
   const midnightIdx = -1   // single-day view, no midnight separator needed
+
+  const showKindergarten = isWeekdayForTab(tab)
 
   renderUvChart(labels, isoTimes,
     chartIdx.map(i => Math.round((hourly.uv_index[i] ?? 0) * 10) / 10),
-    nowIdx, midnightIdx)
+    nowIdx, midnightIdx, fullDay, showKindergarten)
 
   renderRainChart(labels, isoTimes,
-    chartIdx.map(i => hourly.precipitation_probability[i] ?? 0),
-    nowIdx, midnightIdx)
+    chartIdx.map(i => Math.round((hourly.precipitation[i] ?? 0) * 10) / 10),
+    nowIdx, midnightIdx, fullDay, showKindergarten)
 
   renderWindChart(labels, isoTimes,
     chartIdx.map(i => Math.round(hourly.wind_speed_10m?.[i] ?? 0)),
-    nowIdx, midnightIdx)
+    nowIdx, midnightIdx, fullDay, showKindergarten)
 
   renderTempChart(labels, isoTimes,
     chartIdx.map(i => Math.round((hourly.temperature_2m?.[i] ?? 0) * 10) / 10),
-    nowIdx, midnightIdx)
+    nowIdx, midnightIdx, fullDay, showKindergarten)
 }
 
 // ── Tab switching ─────────────────────────────────────────
@@ -195,6 +210,17 @@ document.querySelectorAll('.tab').forEach(btn => {
   btn.addEventListener('click', () => {
     activeTab = btn.dataset.day
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn))
+    if (cachedData) renderForTab(activeTab, cachedData.hourly)
+  })
+})
+
+// ── Time-window toggle (06–20 / Ganzer Tag) ───────────────
+document.querySelectorAll('.time-toggle-opt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    fullDay = btn.dataset.window === 'full'
+    document.querySelectorAll('.time-toggle-opt').forEach(b =>
+      b.classList.toggle('active', b === btn)
+    )
     if (cachedData) renderForTab(activeTab, cachedData.hourly)
   })
 })

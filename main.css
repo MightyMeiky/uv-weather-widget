@@ -349,6 +349,44 @@ main {
   gap: var(--gap);
 }
 
+/* ── Section header row (divider + time toggle) ─────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 4px;
+}
+.section-header .section-divider {
+  flex: 1;
+  margin: 0;
+}
+
+/* ── Time window toggle ──────────────────────────────────── */
+.time-toggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--rule);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.time-toggle-opt {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--tab-idle-text);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.time-toggle-opt.active {
+  background: var(--tab-active-bg);
+  color: var(--tab-active-text);
+}
+
 .section-divider {
   display: flex;
   align-items: center;
