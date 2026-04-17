@@ -1,7 +1,7 @@
 // Open-Meteo API — no key required
 // Coordinates: Landsberied, Bavaria
-const LAT = 48.1743
-const LON = 11.1891
+const LAT = 48.1623
+const LON = 11.1686
 
 const BASE = 'https://api.open-meteo.com/v1/forecast'
 
